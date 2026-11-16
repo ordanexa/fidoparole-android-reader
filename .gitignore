@@ -1,0 +1,9 @@
+/build/
+/dist/
+*.jks
+*.keystore
+local.properties
+.idea/
+/artifacts/
+/.venv/
+__pycache__/
