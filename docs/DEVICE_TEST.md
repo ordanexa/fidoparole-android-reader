@@ -1,47 +1,53 @@
-# Gerätetest – 0.1.2-test
+# Device checklist – 0.1.3-test
 
-## Vorbereitung
+## Preparation
 
-- Einen bereits unter Windows lesbaren FidoParole-Test-Vault mit Dummy-Passwort verwenden.
-- Backup / zweiter Token vorhanden; PIN ist bekannt. Kein Reset und keine PIN-Änderung für diesen Test.
-- Windows/RDP darf den Token während des Tests nicht geöffnet haben.
+- Use an existing FidoParole test vault that opens under Windows and contains a dummy password.
+- Have a backup or second key available and know the PIN. Do not reset the key or change its PIN for this test.
+- Windows/RDP must not have the key open during testing.
 
-## Ablauf
+## Procedure
 
-1. APK auf Android installieren. Falls Android nachfragt, Installation für die verwendete Download-App erlauben; Berechtigung danach wieder deaktivieren.
-2. Token2 direkt per USB-C anschließen und **FidoParole Reader** öffnen.
-3. **Security Key verbinden** wählen; Android USB Permission bestätigen.
-4. FIDO2 PIN eingeben und **Entsperren** wählen.
-5. Token berühren, wenn er blinkt. Erwartet: Vault-/Eintragsnamen, keine angezeigten Passwörter.
-6. **Passwort kopieren**, in eine geeignete lokale Test-App einfügen und mit dem bekannten Dummy-Passwort vergleichen. Keine echten Secrets in Chat senden.
-7. Reader erneut öffnen: Er muss gesperrt sein. Nach Ablauf der Frist beim Rückkehren prüfen, ob der eigene Clipboard-Eintrag gelöscht wurde.
-8. Erneut entsperren, Token abziehen: Einträge müssen verschwinden.
-9. Erneut entsperren und 60 Sekunden warten: automatische Sperre prüfen.
-10. Nach dem Test unter Windows öffnen und prüfen, dass Einträge unverändert sind.
+1. Install the APK on Android. If prompted, permit installation from the download app, then revoke that permission afterward.
+2. Connect Token2 directly over USB-C and open **FidoParole Reader**.
+3. Select **Connect security key** and grant Android USB permission.
+4. Enter the FIDO2 PIN and select **Unlock**.
+5. Touch the key when it blinks. Expect vault/entry names with passwords hidden.
+6. Select **Copy**, paste into a suitable local test app and compare with the known dummy password. Never send real secrets in chat.
+7. Return to the reader: it must be locked. After the clipboard timeout, check on return whether the app's clip was removed.
+8. Unlock again and unplug the key: entries must disappear.
+9. Unlock again and wait 60 seconds without interaction: check automatic locking.
+10. Reopen the vault under Windows and verify that its entries are unchanged.
 
-## Rückmeldung
+## Feedback
 
-- Gerät: S24 / Tab S9; Android-Version.
-- USB Permission angeboten und bestätigt?
-- Letzter Status in der App und exakter Fehlercode (z. B. CTAP 0x33).
-- Blinkt der Token, und wurde er berührt?
-- Bei Erfolg: Anzahl Vaults/Einträge und ob Dummy-Passwort korrekt kopiert wurde.
+Report only non-sensitive details:
 
-PIN, Master Passwords und sensible Eintragsnamen nicht übermitteln. Bei PIN-Fehler nicht mehrfach raten; zuerst mit dem bekannten funktionierenden Windows-Weg prüfen.
+- Device: S24 / tablet; Android version.
+- Was USB permission offered and granted?
+- Last app status and exact error code, if any (for example CTAP 0x33).
+- Did the key blink, and was it touched?
+- On success: number of vaults/entries and whether the dummy password copied correctly.
 
-## Update-Test: Passwort anzeigen
+Do not share PINs, master passwords or sensitive entry names. After a PIN error, do not repeatedly guess; verify it using the known working Windows workflow.
 
-0.1.0-test wurde vom Nutzer am 14.11.2026 als auf Hardware funktionierend bestätigt. Für 0.1.1-test:
+## Password display update check
 
-- APK über die bestehende Installation installieren (gleicher Signing-Key).
-- Nach Unlock bleibt das Passwort verborgen. **Passwort anzeigen** zeigt den Dummy-Wert, **Passwort ausblenden** entfernt ihn wieder.
-- Kopieren weiterhin separat prüfen.
-- Bei sichtbarem Passwort zur anderen App wechseln bzw. Token abziehen: Reader muss sperren. Nach erneutem Unlock bleibt die Anzeige verborgen.
+- Install over the existing app using the same signing key.
+- Passwords remain hidden after unlock. **Show** reveals the dummy value; **Hide** removes it.
+- Check **Copy** separately.
+- While a password is visible, switch apps or unplug the key: the reader must lock. After another unlock, passwords must be hidden.
 
-## UI-Test 0.1.2-test
+## Layout and English interface check
 
-- Update über 0.1.0/0.1.1 installieren: Launcher-Name FidoParole Reader und originales pinkes Icon prüfen.
-- Helle Ansicht, lesbarer Token-Name, keine abgeschnittenen Buttons auf Telefon/Tablet.
-- Nach Unlock: PIN-Karte wird ausgeblendet, Einträge mit **Anzeigen** und **Kopieren** erscheinen; **Sperren** stellt die Unlock-Ansicht wieder her.
-- Tastatur/Statusbar dürfen Inhalte nicht verdecken; Hoch-/Querformat prüfen.
-- Anzeigen/Ausblenden, Kopieren und Sperren mit Dummy-Passwort prüfen.
+- Confirm launcher name **FidoParole Reader** and the original pink icon.
+- Check the light interface, readable key label and unclipped buttons on phone and tablet.
+- After unlock, the PIN card disappears and entries show **Show** and **Copy**. **Lock** restores the unlock view.
+- Check portrait/landscape layouts and ensure the keyboard and system bars do not obscure content.
+- Confirm English labels, connection/lock messages and accessibility descriptions.
+- Check empty/default entry titles if available; user-created vault and entry names must remain unchanged.
+- Do not deliberately consume PIN attempts just to inspect translated errors.
+
+## Recorded result
+
+On 2026-11-14 Pascal confirmed successful use of **0.1.2-test** on both a Samsung S24 and tablet. This is not a separate confirmation of every checklist item. The English **0.1.3-test** build still needs a device check.

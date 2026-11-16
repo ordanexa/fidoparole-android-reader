@@ -1,66 +1,71 @@
 # FidoParole Reader
 
-Privates Ordanexa-Projekt. Kleine native Android-App zum **Lesen bestehender FidoParole-Vaults über USB-C** und zum Anzeigen und Kopieren der Passwörter. Dieser Umfang ist das endgültige Produktziel; kein Ausbau zu einem vollständigen Password Manager.
+A small native Android app for **reading existing FidoParole vaults over USB-C**, revealing passwords and copying them. This is the final intended scope, not the beginning of a full password manager.
 
-## Status: 0.1.2-test (14.11.2026)
+An independent, unofficial community reader. Vault management and backups remain in Token2 FidoParole Desktop.
 
-- Installierbare, signierte APK gebaut; Paket `com.ordanexa.fidoreader`.
-- Android 13+ (API 33); 0.1.2-test vom Nutzer auf Samsung S24 und Tablet erfolgreich getestet.
-- Unterstütztes Gerät zunächst ausschließlich Token2 USB `349e:0024`.
-- Keine Internet-, Storage-, NFC- oder Accessibility-Permission.
-- App speichert weder Vault noch PIN oder Master Passwords auf Disk; Android Backup deaktiviert.
-- Nutzer bestätigt am 14.11.2026 auch den erfolgreichen Test von 0.1.2-test auf beiden Geräten. Kein externes Audit.
+## Status: 0.1.3-test (2026-11-14)
 
-## Fester Funktionsumfang
+- Signed, installable APK; package `com.ordanexa.fidoreader`.
+- Android 13+ (API 33). Version 0.1.2-test was successfully tested by Pascal on a Samsung S24 and tablet.
+- Version 0.1.3-test changes the app UI, accessibility labels, status/error messages and repository documentation to English. Device verification of this build is still pending.
+- Initially limited to Token2 USB device `349e:0024`.
+- No Internet, storage, NFC or accessibility permission.
+- No vault, PIN or master password persisted to disk; Android backup is disabled.
+- Experimental software; no external security audit.
 
-1. Token per USB anschließen und Android USB Permission erteilen.
-2. FIDO2 PIN eingeben; bei Aufforderung Token berühren.
-3. Bestehende Vaults und Einträge lesen.
-4. Passwort per Button anzeigen/ausblenden oder kopieren. Nach jedem Unlock zunächst verborgen.
-5. Vault bei Hintergrundwechsel, Abziehen des Tokens oder nach 60 Sekunden sperren.
+## Fixed feature scope
 
-Kein Create, Edit, Delete, Reset, PIN Change, Backup Import/Export, NFC, Sync oder Autofill. Verwaltung und Backup erfolgen weiterhin in Token2 FidoParole unter Windows.
+1. Connect the key over USB and grant Android USB permission.
+2. Enter the FIDO2 PIN; touch the key when prompted.
+3. Read existing vaults and entries.
+4. Show/hide or copy a password. Passwords start hidden after every unlock.
+5. Lock when the app enters the background, the key is unplugged, or the 60-second inactivity timer expires.
 
-**Read only bezieht sich auf Vault-Inhalte und Credentials.** Authentifizierung kann authenticator-interne Counter und PIN-Retry-Zustände verändern. Eine falsche PIN ist ein echter Fehlversuch. Die App wiederholt PIN-Versuche nicht automatisch und stoppt bei höchstens zwei verbleibenden Versuchen.
+No create, edit, delete, reset, PIN change, backup import/export, NFC, sync or autofill.
 
-## Technik
+**Read-only refers to vault contents and credentials.** Authentication can change internal authenticator counters and PIN retry state. An incorrect PIN consumes a real attempt. The app never retries a PIN automatically and stops when two or fewer attempts remain.
 
-Native Java Activity und Android USB Host API, ohne WebView, Rust-Runtime oder native Libraries. Android-/Java-Crypto-Provider liefern P-256 ECDH, AES-CBC, HMAC/HKDF-SHA256 und AES-256-GCM. Die App implementiert:
+## Implementation
 
-- CTAPHID INIT/CBOR, Fragmentierung, Keepalive und Timeout.
-- PIN/UV Protocol 1 und 2; scoped GetAssertion-Permission sofern vom Token unterstützt.
-- Discoverable GetAssertion für `fido2-vault.token2`, `hmac-secret` und `largeBlobKey`.
-- GetNextAssertion vor allen largeBlob-Lesezugriffen.
-- largeBlob-Checksum, AES-GCM/DEFLATE äußere Schicht, anschließend T2VLT v1 und JSON Format 1/2.
-- Explizite CTAP-Allowlist; largeBlob SET und Credential-/PIN-Schreibbefehle werden blockiert.
+Native Java Activity and Android USB Host API; no WebView, Rust runtime or native libraries. Android/Java cryptographic providers supply P-256 ECDH, AES-CBC, HMAC/HKDF-SHA256 and AES-256-GCM.
+
+- CTAPHID INIT/CBOR, fragmentation, keepalive and timeout handling.
+- PIN/UV protocols 1 and 2; scoped GetAssertion permission where supported.
+- Discoverable GetAssertion for `fido2-vault.token2`, `hmac-secret` and `largeBlobKey`.
+- GetNextAssertion before any largeBlob reads.
+- largeBlob checksum verification and AES-GCM/DEFLATE outer layer, followed by T2VLT v1 and JSON formats 1/2.
+- Explicit CTAP allowlist blocks largeBlob SET and credential/PIN write operations.
+
+Protocol identifiers, salts, key-derivation labels and stored vault data are compatibility requirements and are not translated.
 
 ## Build (Linux / WSL)
 
-Voraussetzungen: JDK 21, Android command-line tools, `zip`, Python nur für Tests.
+Requirements: JDK 21, Android command-line tools, `zip`; Python for tests only.
 
 ```bash
 sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
-export ANDROID_HOME=/pfad/zum/android-sdk
+export ANDROID_HOME=/path/to/android-sdk
 ./build.sh
 ```
 
-Ergebnis: `dist/fidoparole-android-reader-0.1.2-test.apk` und `dist/SHA256SUMS`.
+Output: `dist/fidoparole-android-reader-0.1.3-test.apk` and `dist/SHA256SUMS`.
 
-Ohne eigene Signing-Variablen erzeugt der Build einen **temporären Test-Key** unter `build/test-signing.jks`. Dieser ist nicht im Repo oder Source-Archiv. Der bekannte Test-Key-Passwortwert ist kein Schutz für Releases. Für dauerhafte private Releases einen eigenen Signing-Key lokal verwalten und sichern:
+Without custom signing variables, the build creates a **temporary test key** at `build/test-signing.jks`. It is excluded from Git and source archives. The known test keystore password does not protect release signing. For durable private releases, manage and back up a dedicated signing key locally:
 
 ```bash
-export READER_KEYSTORE=/sicherer/pfad/private-reader.jks
+export READER_KEYSTORE=/secure/path/private-reader.jks
 export READER_KEY_ALIAS=reader
 read -rs -p 'Keystore password: ' READER_STORE_PASS; export READER_STORE_PASS
 read -rs -p 'Key password: ' READER_KEY_PASS; export READER_KEY_PASS
 ./build.sh
 ```
 
-Ein Update benötigt dieselbe Signing-Identität. Bei einem anderen Key muss der alte Test-Build deinstalliert werden; die App hat keine gespeicherten Vault-Daten. Private Signing-Keys niemals in Git oder outbox ablegen.
+An update requires the same signing identity. A different key requires uninstalling the previous test build; the app has no persisted vault data. Never place private signing keys in Git or the handoff folder.
 
 ## Tests
 
-Der JVM-Test verwendet einen **separaten Python-CTAP-Simulator** mit Yubicos `python-fido2` und Python `cryptography`. Er prüft reale Request-/Response-Bytes einschließlich HID-Fragmentierung und Entschlüsselung unabhängig von der Java-Implementierung. Er ersetzt keinen Android-USB-Test.
+The JVM tests use an **independent Python CTAP simulator** based on Yubico's `python-fido2` and Python `cryptography`. They check actual request/response bytes, HID fragmentation and decryption independently of the Java implementation. They do not replace Android USB tests.
 
 ```bash
 python3 -m venv .venv
@@ -69,36 +74,46 @@ pip install -r tests/requirements.txt
 ./test.sh
 ```
 
-Details: [Testbericht](docs/VALIDATION.md), [Gerätetest](docs/DEVICE_TEST.md), [Referenzen](NOTICE.md).
+See the [validation report](docs/VALIDATION.md), [device checklist](docs/DEVICE_TEST.md) and [reference notices](NOTICE.md).
 
-## Grenzen
+## Limitations
 
-- Der Nutzer bestätigt die Basisfunktion auf Hardware. Detaillierte Einzeltests zu Clipboard und automatischer Sperre sind nicht separat dokumentiert.
-- Das Clipboard erhält eine Sensitive-Markierung. Die App fordert nach 20 Sekunden eine Löschung ihres eigenen Clips an und prüft bei Rückkehr erneut. Android kann Hintergrundausführung oder Clipboard-Zugriff einschränken; **keine garantierte Löschfrist**. Andere Apps können eingefügte Passwörter behalten.
-- Screenshots/Recents werden mit FLAG_SECURE geschützt. Ein kompromittiertes Android-Gerät ist dadurch nicht abgesichert.
-- Byte-/Char-Arrays werden soweit möglich geleert. Java/Android/JSON/Clipboard verwenden auch immutable Strings; vollständiges Zeroization ist nicht garantierbar.
-- Die Session schließt den USB-Transport nach dem Lesen; Abziehen des Tokens sperrt die angezeigten Einträge über den Android-Broadcast.
-- Die App enthält keine Logs mit PIN, Passwort oder CTAP-Dumps.
+- Successful use of 0.1.2-test on both Android devices is user-confirmed. Individual clipboard and automatic-lock checks are not separately documented; 0.1.3-test still needs a device check.
+- Clipboard content is marked sensitive. The app requests deletion of its own clip after 20 seconds and checks again on return. Android may restrict background execution or clipboard access, so **there is no guaranteed deletion deadline**. Other apps may retain pasted passwords.
+- FLAG_SECURE protects screenshots and recent-app previews. It does not protect a compromised Android device.
+- Byte/character arrays are cleared where possible. Java, Android, JSON and the clipboard also use immutable strings, so complete memory zeroization is not guaranteed.
+- The USB transport closes after reading. Android's detach broadcast locks the displayed entries when the key is unplugged.
+- The app does not log PINs, passwords or CTAP dumps.
 
-## Repository und Übergabe
+## Repository and handoff
 
-Privates GitHub-Repo: [pascalep/fidoparole-android-reader](https://github.com/pascalep/fidoparole-android-reader). Der getestete Source-Stand 0.1.2-test wird mit Tests und Dokumentation als Baseline übernommen. `infrastructure-toolbox` bleibt unverändert. Raw-Source wird unter `outbox/fidoparole-android-reader/` bereitgestellt; generierte Testartefakte unter `artifacts/` nicht ins Source-Repo übernehmen.
+Private repository: [pascalep/fidoparole-android-reader](https://github.com/pascalep/fidoparole-android-reader).
 
-Vor produktiver Verwendung: offene Lifecycle-Tests durchführen, eigenen Signing-Key festlegen und bestehende unabhängige Recovery-Kopien beibehalten.
+The tested 0.1.2 source was imported as the baseline, together with tests and documentation. Version 0.1.3 adds the English interface and documentation. The separate infrastructure-toolbox repository is unchanged.
 
-## Änderung 0.1.1-test
+Raw source handoff files are maintained under `outbox/fidoparole-android-reader/`. Generated test artifacts belong under `artifacts/` and are excluded from the source repository.
 
-- Pro Eintrag Anzeigen/Ausblenden ergänzt; Kopieren bleibt separat.
-- Sichtbarer Passworttext wird beim Ausblenden und beim Sperren aus der View entfernt.
-- Version Code 2, gleiche Signing-Identität wie 0.1.0-test: Installation als Update vorgesehen.
+Before production use: complete the outstanding device/lifecycle checks, establish a dedicated signing key and retain independent recovery copies.
 
-## Änderung 0.1.2-test
+## Changes in 0.1.1-test
 
-- App-Name **FidoParole Reader**, gleiche Paket-ID und Signing-Identität (Update ohne Neuinstallation).
-- Original-FidoParole-Icon aus dem Token2-Repository, als Launcher-Icon und im Header; Herkunft in NOTICE.md.
-- Helles Theme nach der Windows-Vorlage: Brand `#f23058`, Text `#16181d`, Rahmen `#e4e7eb`, dezente graue Flächen.
-- Lesbarer Modellname **Token2 PIN+ Dual** statt technischer USB-Kennung; keine individuelle Token-ID wird suggeriert.
-- Getrennte Verbindung/Unlock-Ansicht und Eintragsansicht; Vault-Name, Titel und Benutzername klar getrennt.
-- Anzeigen/Ausblenden und Kopieren nebeneinander; Layout auf Telefon und Tablet bis 700 dp Inhaltsbreite.
-- Build verarbeitet jetzt Android Resources; adaptive Launcher-Icons und Theme enthalten.
-- Inoffizieller Community-Reader, kein offizielles Token2-Release. Funktionsumfang bleibt read only über USB.
+- Added Show/Hide per entry, separate from Copy.
+- Hiding or locking removes visible password text from the view.
+- Version code 2; same signing identity as 0.1.0-test, intended for an in-place update.
+
+## Changes in 0.1.2-test
+
+- App name **FidoParole Reader**; unchanged package ID and signing identity.
+- Original FidoParole icon in the launcher and header; origin recorded in NOTICE.md.
+- Light theme inspired by the Windows app: brand `#f23058`, text `#16181d`, borders `#e4e7eb`, subtle gray surfaces.
+- Readable model label **Token2 PIN+ Dual** instead of a technical USB identifier; this is not an individual key name.
+- Separate connection/unlock and entry views; distinct vault name, entry title and username.
+- Show/Hide and Copy side by side; phone/tablet layout with a maximum content width of 700 dp.
+- Build now processes Android resources, adaptive launcher icons and the app theme.
+- Clearly labelled unofficial; USB-only, read-only scope unchanged.
+
+## Changes in 0.1.3-test
+
+- English UI, accessibility labels, status messages, errors and documentation.
+- Version code 4; same package ID and signing identity for an in-place update.
+- No changes to protocol behavior or vault format.

@@ -1,49 +1,62 @@
-# Validation – 0.1.2-test
+# Validation – 0.1.3-test
 
-Stand: 14.11.2026. Basisfunktion von 0.1.0-test auf Hardware vom Nutzer bestätigt. 0.1.1-test ergänzt Anzeigen/Ausblenden.
+Date: 2026-11-14. The initial hardware workflow and version 0.1.2-test were confirmed by the user. Version 0.1.3-test translates the interface and documentation.
 
-## Bereits geprüfte Basis (0.1.0-test)
+## Original baseline checks (0.1.0-test)
 
-- Java-Compile mit JDK 21; Android API 35; DEX für min API 33.
-- APK erzeugt und mit temporärem RSA-3072 Test-Key signiert.
-- `apksigner verify`: gültige APK Signature Scheme v3 Signatur.
-- `zipalign -c`: bestanden.
-- Manifest geprüft: keine angeforderten Permissions, USB Host Feature, Backup aus, keine Internet-Permission.
-- 154 Host-Prüfungen mit unabhängigem Python-Simulator bestanden:
-  - PIN Protocol 1 und 2 einschließlich ECDH, PIN-Hash-Verschlüsselung und Auth-Parameter.
-  - PRF-Salt / hmac-secret, zwei Assertions und korrekte GetNextAssertion-Reihenfolge.
-  - HID-Request-/Response-Fragmentierung und Keepalive-Verarbeitung.
-  - largeBlob-Reads in mehreren Fragmenten und Auswahl anhand AES-GCM-Authentifizierung.
-  - T2VLT-Entschlüsselung und JSON Format 1 / 2 gegen separat erzeugte Daten.
-  - Falsche PIN ohne automatische Wiederholung; niedriger Retry-Counter blockiert.
-  - Fehlendes UV-Flag, falsche Checksum, manipuliertes Vault-Ciphertext und falsches hmac-secret werden abgewiesen.
-  - CBOR-Limits, doppelte Keys, unzulässige Daten und CTAP-Schreibbefehle werden abgewiesen.
-  - Übergebener PIN-Buffer nach Erfolg und Fehler geleert.
+- Compiled with JDK 21 and Android API 35; DEX targets minimum API 33.
+- APK generated and signed with a temporary RSA-3072 test key.
+- APK Signature Scheme v3 verified with apksigner; ZIP alignment passed.
+- Manifest inspected: no requested permissions, USB Host feature, backup disabled and no Internet permission.
+- 154 host checks passed using an independent Python simulator:
+  - PIN protocols 1 and 2, including ECDH, PIN hash encryption and authentication parameters.
+  - PRF salt / hmac-secret, two assertions and correct GetNextAssertion ordering.
+  - HID request/response fragmentation and keepalive handling.
+  - Fragmented largeBlob reads and selection by AES-GCM authentication.
+  - T2VLT decryption and JSON formats 1/2 against independently generated data.
+  - Incorrect PIN without automatic retry; low retry count blocks further attempts.
+  - Missing UV flag, incorrect checksum, tampered ciphertext and incorrect hmac-secret rejected.
+  - CBOR limits, duplicate keys, invalid data and CTAP write commands rejected.
+  - Supplied PIN buffer cleared after success and failure.
 
-## Hardware-Rückmeldung
+## Hardware feedback
 
-Der Nutzer bestätigt am 14.11.2026 ausdrücklich, dass die App funktioniert. Der Basisablauf über USB mit dem vorhandenen Token ist damit nutzerseitig bestätigt. Für 0.1.2-test bestätigt der Nutzer erfolgreiche Tests auf Samsung S24 und Tablet. Android-Version und einzelne Lifecycle-Prüfungen wurden nicht separat benannt.
+On 2026-11-14 the user explicitly confirmed that the initial app worked with the existing key over USB. The user later confirmed successful testing of 0.1.2-test on both Samsung S24 and tablet. Android versions and individual lifecycle checks were not separately reported.
 
-## Noch nicht einzeln nachgewiesen
-- Copy/Paste, Sperre bei Hintergrundwechsel/Abziehen, Clipboard-Cleanup auf Samsung Android.
-- Formelles Security Review oder vollständige Speicherauslöschung.
+## Not separately verified
 
-Die Simulator-Prüfungen ersetzen diese offenen Tests nicht. Die offenen Lifecycle-Prüfungen mit einem Dummy-Passwort durchführen; kein vollständiges Security Review aus dem funktionierenden Basisablauf ableiten.
+- Clipboard cleanup and automatic locking on backgrounding, unplugging and inactivity on Samsung Android.
+- Every individual Show/Hide and Copy/Paste checklist case.
+- Formal security review or complete memory zeroization.
+- Device behavior and layout of the English 0.1.3-test build.
 
-## Prüfung 0.1.1-test
+Simulator checks do not replace these tests. Use a dummy password for outstanding device checks; a working unlock flow is not a complete security review.
 
-- Build erfolgreich; APK-Signatur und ZIP-Alignment geprüft.
-- Version Code 2 und dieselbe Signing-Zertifikat-SHA256 wie 0.1.0-test.
-- UI-Code geprüft: Text initial leer/verborgen; Ausblenden leert Text; Lock leert alle Passwort-Views vor deren Entfernung. FLAG_SECURE bleibt aktiv.
-- USB-/CTAP-/Crypto-Code unverändert. Die 154 bisherigen Protokoll-Prüfungen beziehen sich auf diese unveränderte Basis.
-- Neuer Show/Hide-Ablauf noch nicht auf Android ausgeführt.
+## Version 0.1.1-test
 
-## Prüfung 0.1.2-test
+- Build, APK signature and ZIP alignment passed.
+- Version code 2; same signing certificate SHA-256 as 0.1.0-test.
+- UI review: password text starts empty/hidden; Hide clears it; Lock clears all password views before removal. FLAG_SECURE remains enabled.
+- USB/CTAP/crypto implementation unchanged. The 154 original protocol checks cover that unchanged baseline.
+- The new Show/Hide flow was not executed on Android at this stage.
 
-- Resource-Compile/Link, Java-Compile, DEX und APK-Build erfolgreich.
-- APK Signature Scheme v3 und ZIP-Alignment geprüft; identisches Signing-Zertifikat, Version Code 3.
-- Manifest-Ausgabe bestätigt Label **FidoParole Reader** und adaptives Launcher-Icon.
-- Icon-Datei unverändert aus dem geprüften Upstream-Commit übernommen.
-- Diff geprüft: keine Änderungen an USB-Transport, CTAP- oder Crypto-Kern.
-- UI-Code enthält weiterhin FLAG_SECURE, Clear-on-Lock und deaktiviertes Autofill für PIN/Passwort.
-- Nutzer bestätigt am 14.11.2026 erfolgreiche Tests der neuen Version auf Samsung S24 und Tablet. Keine separate Bestätigung aller Lifecycle-Testfälle.
+## Version 0.1.2-test
+
+- Resource compilation/linking, Java compilation, DEX and APK build passed.
+- APK Signature Scheme v3 and ZIP alignment verified; same signing certificate, version code 3.
+- Manifest output confirmed **FidoParole Reader** and adaptive launcher icon.
+- Icon copied unchanged from the inspected upstream commit.
+- Diff review: no changes to USB transport, CTAP or crypto core.
+- UI retains FLAG_SECURE, clear-on-lock and disabled autofill for PIN/password.
+- User confirmed successful use of the new version on Samsung S24 and tablet; individual lifecycle checks were not separately confirmed.
+
+## Version 0.1.3-test
+
+- English UI, accessibility labels, status messages, errors and documentation.
+- Version code 4; package ID unchanged.
+- Only human-readable strings and version metadata changed in the application; protocol constants and control flow are unchanged.
+- Resource/Java/DEX/APK build passed; all 154 simulator checks passed.
+- APK Signature Scheme v3 and ZIP alignment verified. The signing certificate matches the previous test builds.
+- Source comparison confirms that application changes are limited to string literals.
+- Repository scan found no remaining German prose in tracked source or documentation.
+- A fresh device check remains pending.
