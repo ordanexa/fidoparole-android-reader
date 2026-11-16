@@ -4,6 +4,9 @@ import android.app.*;
 import android.os.*;
 import android.content.*;
 import android.hardware.usb.*;
+import android.hardware.biometrics.BiometricManager;
+import android.hardware.biometrics.BiometricPrompt;
+import javax.crypto.Cipher;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.*;
@@ -25,6 +28,14 @@ public final class MainActivity extends Activity {
     private static final int BG=0xfff5f7f9,SURFACE=0xffffffff,BORDER=0xffe4e7eb,INK=0xff16181d,MUTED=0xff5b636e,ACCENT=0xfff23058;
     private LinearLayout root,entries,unlockPanel,vaultHeader;private TextView status,deviceText,deviceDetail,vaultCount;private EditText pin;private Button connect,unlock;
     private View deviceBadge;
+    private Button biometricUnlock, forgetPin;
+    private CheckBox savePin;
+    private SavedPinStore pinStore;
+    private CancellationSignal biometricSignal;
+    private byte[] pendingManualPin;
+    private static final int STRONG_BIOMETRIC = BiometricManager.Authenticators.BIOMETRIC_STRONG;
+    private static final String UNKNOWN_TOKEN = "no-usb-serial";
+
     private final List<Entry> secrets=new ArrayList<>();
     private final List<TextView> passwordViews=new ArrayList<>();
     private int generation=0;private boolean busy=false,foreground=false,receiverRegistered=false;
@@ -36,17 +47,20 @@ public final class MainActivity extends Activity {
         if(USB_PERMISSION.equals(intent.getAction())){
             UsbDevice d=intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
             if(selected!=null&&d!=null&&selected.getDeviceId()==d.getDeviceId()){
-                if(intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED,false)&&usb.hasPermission(selected)){status.setText("Connected. Enter your security key PIN.");deviceDetail.setText("USB-C · Connected");deviceBadge.setBackground(round(0xff59d3a6,20,0));unlock.setEnabled(true);}
+                if(intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED,false)&&usb.hasPermission(selected)){status.setText("Connected. Enter your security key PIN.");deviceDetail.setText("USB-C · Connected");deviceBadge.setBackground(round(0xff59d3a6,20,0));unlock.setEnabled(true);refreshPinControls();}
                 else status.setText("USB access denied");
             }
+        }else if(UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(intent.getAction())){
+            if(foreground&&selected==null) findToken(false);
         }else if(UsbManager.ACTION_USB_DEVICE_DETACHED.equals(intent.getAction())){
             UsbDevice d=intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
-            if(selected!=null&&d!=null&&selected.getDeviceId()==d.getDeviceId()){lock("Security key removed. The vault is locked.");selected=null;unlock.setEnabled(false);deviceText.setText("Token2 PIN+ Dual");deviceDetail.setText("Not connected");deviceBadge.setBackground(round(MUTED,20,0));clearOwnClipboard();}
+            if(selected!=null&&d!=null&&selected.getDeviceId()==d.getDeviceId()){lock("Security key removed. The vault is locked.");selected=null;unlock.setEnabled(false);deviceText.setText("Token2 PIN+ Dual");deviceDetail.setText("Not connected");deviceBadge.setBackground(round(MUTED,20,0));clearOwnClipboard();refreshPinControls();}
         }
     }};
     @Override public void onCreate(Bundle state){
         super.onCreate(state);getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
         usb=(UsbManager)getSystemService(USB_SERVICE);
+        pinStore=new SavedPinStore(this);
         ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);scroll.setBackgroundColor(BG);scroll.setClipToPadding(false);
         scroll.setOnApplyWindowInsetsListener((v,insets)->{android.graphics.Insets bars=insets.getInsets(WindowInsets.Type.systemBars()|WindowInsets.Type.ime());v.setPadding(bars.left,bars.top,bars.right,bars.bottom);return insets;});
         FrameLayout frame=new FrameLayout(this);scroll.addView(frame,new ScrollView.LayoutParams(-1,-2));
@@ -62,13 +76,26 @@ public final class MainActivity extends Activity {
         LinearLayout tokenCard=card();root.addView(tokenCard);tokenCard.addView(overline("YOUR SECURITY KEY"));space(tokenCard,12);
         LinearLayout deviceRow=row();deviceBadge=new View(this);LinearLayout.LayoutParams dot=new LinearLayout.LayoutParams(dp(9),dp(9));dot.rightMargin=dp(12);deviceRow.addView(deviceBadge,dot);deviceBadge.setBackground(round(MUTED,20,0));
         LinearLayout deviceLabels=column();deviceText=text("Token2 PIN+ Dual",20,INK);deviceText.setTypeface(Typeface.DEFAULT,Typeface.BOLD);deviceLabels.addView(deviceText);deviceDetail=text("Connect directly via USB-C",13,MUTED);deviceLabels.addView(deviceDetail);deviceRow.addView(deviceLabels,new LinearLayout.LayoutParams(0,-2,1));tokenCard.addView(deviceRow);space(tokenCard,18);
-        connect=button("Connect security key",false);tokenCard.addView(connect,new LinearLayout.LayoutParams(-1,dp(50)));connect.setOnClickListener(v->findToken());space(root,14);
+        connect=button("Connect security key",false);tokenCard.addView(connect,new LinearLayout.LayoutParams(-1,dp(50)));connect.setOnClickListener(v->findToken(true));space(root,14);
 
         unlockPanel=card();root.addView(unlockPanel);unlockPanel.addView(overline("UNLOCK VAULT"));space(unlockPanel,14);
         pin=new EditText(this);pin.setHint("Security key PIN");pin.setTextSize(18);pin.setTextColor(INK);pin.setHintTextColor(MUTED);pin.setSingleLine(true);pin.setPadding(dp(16),dp(12),dp(16),dp(12));pin.setBackground(round(SURFACE,8,BORDER));pin.setBackgroundTintList(null);
         pin.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_PASSWORD);pin.setSaveEnabled(false);pin.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS);
         pin.setImeOptions(android.view.inputmethod.EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING|android.view.inputmethod.EditorInfo.IME_ACTION_DONE);unlockPanel.addView(pin,new LinearLayout.LayoutParams(-1,dp(56)));space(unlockPanel,14);
         unlock=button("Unlock",true);unlock.setEnabled(false);unlockPanel.addView(unlock,new LinearLayout.LayoutParams(-1,dp(52)));unlock.setOnClickListener(v->startUnlock());
+        savePin=new CheckBox(this);
+        savePin.setText("Save PIN on this device");
+        savePin.setTextColor(INK);
+        unlockPanel.addView(savePin);
+        biometricUnlock=button("Unlock with biometrics",false);
+        unlockPanel.addView(biometricUnlock,new LinearLayout.LayoutParams(-1,dp(50)));
+        biometricUnlock.setOnClickListener(v->startSavedUnlock());
+        forgetPin=button("Forget saved PIN",false);
+        unlockPanel.addView(forgetPin,new LinearLayout.LayoutParams(-1,dp(50)));
+        forgetPin.setOnClickListener(v->new AlertDialog.Builder(this)
+                .setMessage("Forget this app’s saved PIN?")
+                .setNegativeButton("Cancel",null)
+                .setPositiveButton("Forget",(dialog,which)->forgetSavedPin()).show());
         pin.setOnEditorActionListener((v,action,event)->{if(action==android.view.inputmethod.EditorInfo.IME_ACTION_DONE){startUnlock();return true;}return false;});space(unlockPanel,12);
         unlockPanel.addView(text("Enter your PIN and touch the key when it blinks.",13,MUTED));
 
@@ -76,9 +103,11 @@ public final class MainActivity extends Activity {
         vaultHeader=row();vaultHeader.setPadding(0,dp(2),0,dp(14));vaultCount=text("Your entries",21,INK);vaultCount.setTypeface(Typeface.DEFAULT,Typeface.BOLD);vaultHeader.addView(vaultCount,new LinearLayout.LayoutParams(0,-2,1));
         Button lock=button("Lock",false);vaultHeader.addView(lock,new LinearLayout.LayoutParams(dp(106),dp(46)));lock.setOnClickListener(v->{lock("Vault locked.");clearOwnClipboard();});vaultHeader.setVisibility(View.GONE);root.addView(vaultHeader);
         entries=column();root.addView(entries);
-        space(root,14);TextView footer=text("Unofficial community reader · 0.1.3-test\nManage & back up in FidoParole Desktop",12,MUTED);footer.setGravity(Gravity.CENTER);footer.setLineSpacing(dp(3),1);root.addView(footer);
+        space(root,14);TextView footer=text("Unofficial community reader · 0.1.4-test\nManage & back up in FidoParole Desktop",12,MUTED);footer.setGravity(Gravity.CENTER);footer.setLineSpacing(dp(3),1);root.addView(footer);
         IntentFilter filter=new IntentFilter(USB_PERMISSION);filter.addAction(UsbManager.ACTION_USB_DEVICE_DETACHED);
+        filter.addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED);
         registerReceiver(receiver,filter,Context.RECEIVER_NOT_EXPORTED);receiverRegistered=true;
+        refreshPinControls();
     }
     int dp(int value){return Math.round(value*getResources().getDisplayMetrics().density);}
     LinearLayout column(){LinearLayout l=new LinearLayout(this);l.setOrientation(LinearLayout.VERTICAL);return l;}
@@ -97,23 +126,45 @@ public final class MainActivity extends Activity {
         b.setBackground(new RippleDrawable(ColorStateList.valueOf(0x22f23058),backgrounds,round(Color.WHITE,12,0)));return b;
     }
     void showUnlocked(boolean open){unlockPanel.setVisibility(open?View.GONE:View.VISIBLE);connect.setVisibility(open?View.GONE:View.VISIBLE);vaultHeader.setVisibility(open?View.VISIBLE:View.GONE);}
-    void findToken(){
+    void findToken(boolean requestAccess){
         lock("Looking for security key …");selected=null;unlock.setEnabled(false);deviceDetail.setText("Not connected");deviceBadge.setBackground(round(MUTED,20,0));List<UsbDevice> found=new ArrayList<>();
         for(UsbDevice d:usb.getDeviceList().values())if(d.getVendorId()==0x349e&&d.getProductId()==0x0024)found.add(d);
-        if(found.size()!=1){status.setText(found.isEmpty()?"No security key found. Check the USB-C connection.":"Connect only one Token2 key.");return;}
+        if(found.size()!=1){refreshPinControls();status.setText(found.isEmpty()?"No security key found. Check the USB-C connection.":"Connect only one Token2 key.");return;}
         selected=found.get(0);deviceText.setText("Token2 PIN+ Dual");deviceDetail.setText("USB-C · Allow access");
-        if(usb.hasPermission(selected)){status.setText("Connected. Enter your security key PIN.");deviceDetail.setText("USB-C · Connected");deviceBadge.setBackground(round(0xff59d3a6,20,0));unlock.setEnabled(true);}
-        else {PendingIntent permission=PendingIntent.getBroadcast(this,0,new Intent(USB_PERMISSION).setPackage(getPackageName()),PendingIntent.FLAG_MUTABLE|PendingIntent.FLAG_UPDATE_CURRENT);usb.requestPermission(selected,permission);}
+        if(usb.hasPermission(selected)){status.setText("Connected. Enter your security key PIN.");deviceDetail.setText("USB-C · Connected");deviceBadge.setBackground(round(0xff59d3a6,20,0));unlock.setEnabled(true);refreshPinControls();}
+        else if(requestAccess){PendingIntent permission=PendingIntent.getBroadcast(this,0,new Intent(USB_PERMISSION).setPackage(getPackageName()),PendingIntent.FLAG_MUTABLE|PendingIntent.FLAG_UPDATE_CURRENT);usb.requestPermission(selected,permission);}
+        else status.setText("Key detected. Tap Connect security key to allow USB access.");
+        refreshPinControls();
     }
     void startUnlock(){
-        if(busy||!foreground||selected==null||!usb.hasPermission(selected))return;
+        if(!canUnlock())return;
         char[] chars=new char[pin.length()];pin.getText().getChars(0,chars.length,chars,0);
         ByteBuffer encoded=StandardCharsets.UTF_8.encode(CharBuffer.wrap(chars));byte[] value=new byte[encoded.remaining()];encoded.get(value);if(encoded.hasArray())Arrays.fill(encoded.array(),(byte)0);Arrays.fill(chars,'\0');pin.setText("");
         if(value.length<4||value.length>63){Crypto.wipe(value);status.setText("PIN must be 4–63 UTF-8 bytes.");return;}
         ((android.view.inputmethod.InputMethodManager)getSystemService(INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(pin.getWindowToken(),0);
-        lock("Connecting to security key …");final int operation=++generation;busy=true;unlock.setEnabled(false);connect.setEnabled(false);pin.setEnabled(false);
+        if(savePin.isChecked()&&biometricsAvailable()){
+            String tokenId=selectedTokenId();
+            pendingManualPin=value;
+            try{
+                authenticate("Protect saved PIN",pinStore.encryptCipher(),cipher->{
+                    SavedPinStore.PendingPin sealed=pinStore.seal(cipher,tokenId,value);
+                    pendingManualPin=null;
+                    runUnlock(value,sealed,false);
+                });
+            }catch(Exception e){
+                cancelBiometric();
+                status.setText("Could not protect the PIN. Enter it again or forget the old saved PIN.");
+            }
+            return;
+        }
+        runUnlock(value,null,false);
+    }
+
+    private void runUnlock(byte[] value,SavedPinStore.PendingPin sealed,boolean fromSaved){
+        if(!canUnlock()||value.length<4||value.length>63){Crypto.wipe(value);return;}
+        lock("Connecting to security key …");final int operation=++generation;busy=true;unlock.setEnabled(false);connect.setEnabled(false);pin.setEnabled(false);refreshPinControls();
         final UsbIo io;
-        try{io=new UsbIo(usb,selected);transport=io;}catch(Exception e){Crypto.wipe(value);busy=false;unlock.setEnabled(true);connect.setEnabled(true);pin.setEnabled(true);status.setText(e.getMessage());return;}
+        try{io=new UsbIo(usb,selected);transport=io;}catch(Exception e){Crypto.wipe(value);busy=false;unlock.setEnabled(true);connect.setEnabled(true);pin.setEnabled(true);status.setText(e.getMessage());refreshPinControls();return;}
         worker.execute(()->{
             List<Reader.Vault> vaults=null;List<Entry> decoded=new ArrayList<>();Exception failure=null;
             try(Hid hid=new Hid(io)){
@@ -131,10 +182,128 @@ public final class MainActivity extends Activity {
             main.post(()->{
                 if(generation!=operation||!foreground){for(Entry e:decoded)e.close();return;}
                 transport=null;busy=false;unlock.setEnabled(selected!=null&&usb.hasPermission(selected));connect.setEnabled(true);pin.setEnabled(true);
-                if(error!=null){for(Entry e:decoded)e.close();status.setText(error instanceof javax.crypto.AEADBadTagException?"Decryption failed: format or key mismatch.":safeError(error));return;}
-                secrets.addAll(decoded);showEntries();showUnlocked(true);deviceDetail.setText("USB-C · Vault unlocked");status.setText("Unlocked. Choose an entry to reveal or copy.");main.postDelayed(autoLock,60000);
+                refreshPinControls();
+                if(error!=null){
+                    for(Entry e:decoded)e.close();
+                    if(fromSaved&&safeError(error).startsWith("CTAP 0x31:")){
+                        forgetSavedPin();
+                        status.setText("Saved PIN rejected. Enter the PIN manually. No automatic retry.");
+                    }else status.setText(error instanceof javax.crypto.AEADBadTagException?"Decryption failed: format or key mismatch.":safeError(error));
+                    return;
+                }
+                secrets.addAll(decoded);showEntries();showUnlocked(true);deviceDetail.setText("USB-C · Vault unlocked");status.setText(sealed!=null&&!pinStore.save(sealed)
+                        ?"Unlocked, but the PIN could not be saved."
+                        :"Unlocked. Choose an entry to reveal or copy.");
+                savePin.setChecked(false);
+                main.postDelayed(autoLock,60000);
             });
         });
+    }
+    private boolean canUnlock(){
+        return !busy&&biometricSignal==null&&foreground&&selected!=null&&usb.hasPermission(selected);
+    }
+
+    private boolean biometricsAvailable(){
+        BiometricManager manager=getSystemService(BiometricManager.class);
+        return manager!=null&&manager.canAuthenticate(STRONG_BIOMETRIC)==BiometricManager.BIOMETRIC_SUCCESS;
+    }
+
+    private String selectedTokenId(){
+        try{
+            String serial=selected.getSerialNumber();
+            if(serial!=null&&!serial.trim().isEmpty())return "usb-serial:"+serial;
+        }catch(SecurityException ignored){}
+        return UNKNOWN_TOKEN;
+    }
+
+    private void refreshPinControls(){
+        if(savePin==null)return;
+        boolean usable=canUnlock()&&biometricsAvailable();
+        savePin.setText(pinStore.hasPin()?"Replace saved PIN on this device":"Save PIN on this device");
+        savePin.setVisibility(usable?View.VISIBLE:View.GONE);
+        biometricUnlock.setVisibility(usable&&pinStore.matches(selectedTokenId())?View.VISIBLE:View.GONE);
+        forgetPin.setVisibility(!busy&&biometricSignal==null&&pinStore.hasPin()?View.VISIBLE:View.GONE);
+    }
+
+    private void forgetSavedPin(){
+        try{
+            pinStore.forget();
+            status.setText("Saved PIN forgotten.");
+        }catch(Exception e){status.setText("Could not remove the saved PIN.");}
+        refreshPinControls();
+    }
+
+    private void startSavedUnlock(){
+        if(!canUnlock())return;
+        String tokenId=selectedTokenId();
+        if(!pinStore.matches(tokenId))return;
+        if(UNKNOWN_TOKEN.equals(tokenId)){
+            UsbDevice key=selected;
+            new AlertDialog.Builder(this)
+                    .setMessage("This key has no USB serial number. Use the saved PIN only if you connected the same key.")
+                    .setNegativeButton("Cancel",null)
+                    .setPositiveButton("Use saved PIN",(dialog,which)->{
+                        if(key==selected) unlockSavedPin(tokenId);
+                    }).show();
+        }else unlockSavedPin(tokenId);
+    }
+
+    private void unlockSavedPin(String tokenId){
+        if(!canUnlock()||!tokenId.equals(selectedTokenId()))return;
+        try{
+            authenticate("Unlock with saved PIN",pinStore.decryptCipher(tokenId),
+                    cipher->runUnlock(pinStore.read(cipher,tokenId),null,true));
+        }catch(Exception e){
+            cancelBiometric();
+            status.setText("Saved PIN unavailable. Enter the PIN manually or forget the saved PIN.");
+        }
+    }
+
+    private interface AuthorizedCipher { void accept(Cipher cipher) throws Exception; }
+
+    private void authenticate(String title,Cipher cipher,AuthorizedCipher action){
+        CancellationSignal signal=new CancellationSignal();
+        biometricSignal=signal;
+        UsbDevice key=selected;
+        unlock.setEnabled(false);
+        connect.setEnabled(false);
+        refreshPinControls();
+        new BiometricPrompt.Builder(this).setTitle(title)
+                .setAllowedAuthenticators(STRONG_BIOMETRIC)
+                .setNegativeButton("Cancel",getMainExecutor(),(dialog,which)->signal.cancel())
+                .build().authenticate(new BiometricPrompt.CryptoObject(cipher),signal,getMainExecutor(),
+                        new BiometricPrompt.AuthenticationCallback(){
+            @Override public void onAuthenticationError(int code,CharSequence message){
+                if(biometricSignal!=signal)return;
+                cancelBiometric();
+                status.setText("Biometric unlock cancelled. Enter the PIN manually.");
+            }
+
+            @Override public void onAuthenticationSucceeded(BiometricPrompt.AuthenticationResult result){
+                if(biometricSignal!=signal)return;
+                biometricSignal=null;
+                try{
+                    if(foreground&&selected==key&&canUnlock())action.accept(result.getCryptoObject().getCipher());
+                }catch(Exception e){
+                    status.setText("Could not use the saved PIN. Enter the PIN manually.");
+                }finally{
+                    if(!busy)cancelBiometric();
+                }
+            }
+        });
+    }
+
+    private void cancelBiometric(){
+        CancellationSignal signal=biometricSignal;
+        biometricSignal=null;
+        if(signal!=null)signal.cancel();
+        Crypto.wipe(pendingManualPin);
+        pendingManualPin=null;
+        if(!busy&&unlock!=null){
+            connect.setEnabled(true);
+            unlock.setEnabled(canUnlock());
+            refreshPinControls();
+        }
     }
     String safeError(Exception e){String m=e.getMessage();if(m==null)return "Error: "+e.getClass().getSimpleName();if(e instanceof JSONException)return "Invalid vault JSON";return m.length()>250?"Protocol error: "+e.getClass().getSimpleName():m;}
     void clearPasswordViews(){for(TextView view:passwordViews){view.setText("");view.setVisibility(View.GONE);}passwordViews.clear();}
@@ -166,10 +335,10 @@ public final class MainActivity extends Activity {
         if(clipboardLabel==null)return;ClipboardManager cb=(ClipboardManager)getSystemService(CLIPBOARD_SERVICE);
         try{ClipDescription desc=cb.getPrimaryClipDescription();if(desc!=null&&clipboardLabel.contentEquals(desc.getLabel())){cb.clearPrimaryClip();clipboardLabel=null;}else if(foreground)clipboardLabel=null;}catch(SecurityException ignored){}
     }
-    void lock(String message){generation++;main.removeCallbacks(autoLock);if(transport!=null){transport.close();transport=null;}busy=false;
-        clearPasswordViews();for(Entry e:secrets)e.close();secrets.clear();if(entries!=null)entries.removeAllViews();if(pin!=null){pin.setText("");pin.setEnabled(true);}if(connect!=null)connect.setEnabled(true);if(unlock!=null)unlock.setEnabled(selected!=null&&usb.hasPermission(selected));if(status!=null)status.setText(message);if(unlockPanel!=null)showUnlocked(false);if(deviceDetail!=null&&selected!=null)deviceDetail.setText("USB-C · Vault locked");
+    void lock(String message){cancelBiometric();generation++;main.removeCallbacks(autoLock);if(transport!=null){transport.close();transport=null;}busy=false;
+        clearPasswordViews();for(Entry e:secrets)e.close();secrets.clear();if(entries!=null)entries.removeAllViews();if(pin!=null){pin.setText("");pin.setEnabled(true);}if(connect!=null)connect.setEnabled(true);if(unlock!=null)unlock.setEnabled(selected!=null&&usb.hasPermission(selected));if(status!=null)status.setText(message);if(unlockPanel!=null)showUnlocked(false);if(deviceDetail!=null&&selected!=null)deviceDetail.setText("USB-C · Vault locked");refreshPinControls();
     }
-    @Override protected void onResume(){super.onResume();foreground=true;if(clipboardLabel!=null&&SystemClock.elapsedRealtime()>=clipboardExpiry)clearOwnClipboard();}
+    @Override protected void onResume(){super.onResume();foreground=true;if(selected==null)findToken(false);else{unlock.setEnabled(canUnlock());refreshPinControls();}if(clipboardLabel!=null&&SystemClock.elapsedRealtime()>=clipboardExpiry)clearOwnClipboard();}
     @Override protected void onPause(){foreground=false;lock("Locked · App in background");super.onPause();}
     @Override protected void onDestroy(){lock("Locked");clearOwnClipboard();main.removeCallbacksAndMessages(null);worker.shutdownNow();if(receiverRegistered)unregisterReceiver(receiver);super.onDestroy();}
 }

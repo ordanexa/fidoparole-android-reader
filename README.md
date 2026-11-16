@@ -4,14 +4,19 @@ An unofficial Android community companion by [Ordanexa](https://github.com/ordan
 
 ## Status
 
-The latest build is **0.1.3-test** (2026-11-14). There is no planned development schedule. This build supports USB-C only.
+**0.1.4-test** adds optional biometric unlock with an app-local saved token PIN. Connect a USB key, opt in to **Save PIN on this device**, and authenticate to protect the PIN. The encrypted PIN is kept only after the vault opens successfully. For later access, choose **Unlock with biometrics** or enter the PIN manually. **Forget saved PIN** removes the local copy and its Keystore key. Saving for another token replaces the current saved PIN.
+
+The reader matches the saved PIN to the USB serial number when the key exposes one. Otherwise, explicitly confirm that the same physical key is connected before using the saved PIN. A rejected saved PIN is not retried automatically. The physical token and its normal touch prompt remain part of unlock.
+
+
+The previous build is **0.1.3-test** (2026-11-14). There is no planned development schedule. This build supports USB-C only.
 
 - Signed, installable APK; package `com.ordanexa.fidoreader`.
 - Android 13+ (API 33). Version 0.1.2-test was successfully tested by Pascal on a Samsung S24 and tablet.
 - Version 0.1.3-test changes the app UI, accessibility labels, status/error messages and repository documentation to English. Device verification of this build is still pending.
 - Initially limited to Token2 USB device `349e:0024`.
-- No Internet, storage, NFC or accessibility permission.
-- No vault, PIN or master password persisted to disk; Android backup is disabled.
+- Uses the Android biometric permission. No Internet, storage, NFC or accessibility permission.
+- No vault or master password is persisted to disk. Only an opt-in encrypted token PIN is saved locally; Android backup is disabled.
 - Experimental software; no external security audit.
 
 ## Fixed feature scope
@@ -49,7 +54,7 @@ export ANDROID_HOME=/path/to/android-sdk
 ./build.sh
 ```
 
-Output: `dist/fidoparole-android-reader-0.1.3-test.apk` and `dist/SHA256SUMS`.
+Output: `dist/fidoparole-android-reader-0.1.4-test.apk` and `dist/SHA256SUMS`.
 
 By default, the build creates a local test key at `build/test-signing.jks`. See [APK signing](docs/SIGNING.md) for custom signing and update compatibility.
 
