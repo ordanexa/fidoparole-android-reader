@@ -1,0 +1,52 @@
+name: Signed Android build
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Install Android build tools
+        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - name: Build with preserved signing identity
+        env:
+          KEYSTORE_BASE64: ${{ secrets.READER_KEYSTORE_BASE64 }}
+          READER_STORE_PASS: ${{ secrets.READER_SIGNING_PASSWORD }}
+          READER_KEY_PASS: ${{ secrets.READER_SIGNING_PASSWORD }}
+          READER_KEY_ALIAS: fidoparole-reader
+          READER_KEYSTORE: ${{ runner.temp }}/fidoparole-reader-signing.p12
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$KEYSTORE_BASE64"
+          test -n "$READER_STORE_PASS"
+          umask 077
+          trap 'rm -f "$READER_KEYSTORE"' EXIT
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$READER_KEYSTORE"
+          unset KEYSTORE_BASE64
+          ./build.sh
+          "$ANDROID_HOME/build-tools/35.0.0/zipalign" -c -p 4 dist/*.apk
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs dist/*.apk > "$RUNNER_TEMP/signature.txt"
+          grep -Fq '707f6d453412ec20afbf0aa498d6c63d07c3d4548688030b45f5cd7b04c8b485' "$RUNNER_TEMP/signature.txt"
+      - name: Upload signed APK and checksums
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: fidoparole-reader-signed-${{ github.sha }}
+          path: |
+            dist/*.apk
+            dist/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 90
