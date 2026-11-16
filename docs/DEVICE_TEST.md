@@ -1,4 +1,4 @@
-# Device checklist – 0.1.3-test
+# Device checklist
 
 ## Preparation
 
@@ -48,6 +48,14 @@ Do not share PINs, master passwords or sensitive entry names. After a PIN error,
 - Check empty/default entry titles if available; user-created vault and entry names must remain unchanged.
 - Do not deliberately consume PIN attempts just to inspect translated errors.
 
+## Saved PIN and biometric unlock (0.1.4-test)
+
+1. Update the installed test build with the archived 0.1.4-test APK. Connect the same test key and confirm manual PIN unlock still works.
+2. Lock the app. Select **Save PIN on this device**, enter the known PIN and complete the biometric prompt and normal token touch. Use a device with strong biometrics enrolled.
+3. Lock and reopen the app with the same key. Select **Unlock with biometrics** and verify that the vault opens after the token touch. If Android reports no USB serial number, confirm the same physical key is connected when prompted.
+4. Cancel a biometric prompt and confirm you can still enter the PIN manually.
+5. Choose **Forget saved PIN** and confirm biometric unlock is no longer offered. Confirm manual unlock still works.
+
 ## Recorded result
 
-On 2026-11-14 Pascal confirmed successful use of **0.1.2-test** on both a Samsung S24 and tablet. This is not a separate confirmation of every checklist item. The English **0.1.3-test** build still needs a device check.
+On 2026-11-14 Pascal confirmed successful use of **0.1.2-test** on both a Samsung S24 and tablet. This is not a separate confirmation of every checklist item. Device checks for **0.1.3-test** and **0.1.4-test** are pending.

@@ -1,4 +1,4 @@
-# Validation – 0.1.3-test
+# Validation
 
 Date: 2026-11-14. The initial hardware workflow and version 0.1.2-test were confirmed by the user. Version 0.1.3-test translates the interface and documentation.
 
@@ -60,3 +60,9 @@ Simulator checks do not replace these tests. Use a dummy password for outstandin
 - Source comparison confirms that application changes are limited to string literals.
 - Repository scan found no remaining German prose in tracked source or documentation.
 - A fresh device check remains pending.
+
+## Version 0.1.4-test
+
+On 2026-11-16, GitHub Actions rebuilt the reader from source commit `d3afbdae317d49e3a0d8f33af014aa071ada7f89` and verified the APK signature against the existing Reader certificate. The run verified the package `com.ordanexa.fidoreader`, version code 5 and version name `0.1.4-test`. SHA-256 verification passed for all APKs in the archive. [Build run](https://github.com/ordanexa/fidoparole-android-reader/actions/runs/43957380767) · [SHA-256 checksums](../apks/SHA256SUMS)
+
+On-device USB and biometric checks for this build are pending. Follow the [device checklist](DEVICE_TEST.md#saved-pin-and-biometric-unlock-014-test).

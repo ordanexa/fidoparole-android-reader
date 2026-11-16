@@ -2,18 +2,16 @@
 
 An unofficial Android community companion by [Ordanexa](https://github.com/ordanexa). It reads existing FidoParole vaults over USB-C and lets you show or copy passwords. Use [Token2 FidoParole Desktop](https://github.com/token2/fidoparole) to manage and back up vaults.
 
-## Status
+## Current test build
 
-**0.1.4-test** adds optional biometric unlock with an app-local saved token PIN. Connect a USB key, opt in to **Save PIN on this device**, and authenticate to protect the PIN. The encrypted PIN is kept only after the vault opens successfully. For later access, choose **Unlock with biometrics** or enter the PIN manually. **Forget saved PIN** removes the local copy and its Keystore key. Saving for another token replaces the current saved PIN.
+[Download FidoParole Reader 0.1.4-test](https://raw.githubusercontent.com/ordanexa/fidoparole-android-reader/a3e264afee9e1cee879d998096539dd4d2aebe0e/apks/fidoparole-android-reader-0.1.4-test.apk) · [SHA-256 checksums](apks/SHA256SUMS) · [APK archive](apks/)
+
+Version **0.1.4-test** (2026-11-16) adds optional biometric unlock with an app-local saved token PIN. It requires Android 13 or later and a USB-C connection to a supported Token2 key. Android must have a strong biometric enrolled to offer biometric unlock. Connect a USB key, opt in to **Save PIN on this device**, and authenticate to protect the PIN. The encrypted PIN is kept only after the vault opens successfully. For later access, choose **Unlock with biometrics** or enter the PIN manually. **Forget saved PIN** removes the local copy and its Keystore key. Saving for another token replaces the current saved PIN.
 
 The reader matches the saved PIN to the USB serial number when the key exposes one. Otherwise, explicitly confirm that the same physical key is connected before using the saved PIN. A rejected saved PIN is not retried automatically. The physical token and its normal touch prompt remain part of unlock.
 
-
-The previous build is **0.1.3-test** (2026-11-14). There is no planned development schedule. This build supports USB-C only.
-
-- Signed, installable APK; package `com.ordanexa.fidoreader`.
-- Android 13+ (API 33). Version 0.1.2-test was successfully tested by Pascal on a Samsung S24 and tablet.
-- Version 0.1.3-test changes the app UI, accessibility labels, status/error messages and repository documentation to English. Device verification of this build is still pending.
+- Package `com.ordanexa.fidoreader`, version code 5. The archived APK uses the same signing certificate as 0.1.3-test and supports an in-place update from it.
+- The APK signature and package metadata were verified in GitHub Actions. On-device testing of 0.1.4-test is pending.
 - Initially limited to Token2 USB device `349e:0024`.
 - Uses the Android biometric permission. No Internet, storage, NFC or accessibility permission.
 - No vault or master password is persisted to disk. Only an opt-in encrypted token PIN is saved locally; Android backup is disabled.
@@ -22,7 +20,7 @@ The previous build is **0.1.3-test** (2026-11-14). There is no planned developme
 ## Fixed feature scope
 
 1. Connect the key over USB and grant Android USB permission.
-2. Enter the FIDO2 PIN; touch the key when prompted.
+2. Enter the FIDO2 PIN or choose **Unlock with biometrics** if a PIN was saved for the connected key. Touch the key when prompted.
 3. Read existing vaults and entries.
 4. Show/hide or copy a password. Passwords start hidden after every unlock.
 5. Lock when the app enters the background, the key is unplugged, or the 60-second inactivity timer expires.
@@ -73,23 +71,26 @@ See the [validation report](docs/VALIDATION.md), [device checklist](docs/DEVICE_
 
 ## Limitations
 
-- Successful use of 0.1.2-test on both Android devices is user-confirmed. Individual clipboard and automatic-lock checks are not separately documented; 0.1.3-test still needs a device check.
 - Clipboard content is marked sensitive. The app requests deletion of its own clip after 20 seconds and checks again on return. Android may restrict background execution or clipboard access, so **there is no guaranteed deletion deadline**. Other apps may retain pasted passwords.
 - FLAG_SECURE protects screenshots and recent-app previews. It does not protect a compromised Android device.
 - Byte/character arrays are cleared where possible. Java, Android, JSON and the clipboard also use immutable strings, so complete memory zeroization is not guaranteed.
 - The USB transport closes after reading. Android's detach broadcast locks the displayed entries when the key is unplugged.
 - The app does not log PINs, passwords or CTAP dumps.
 
-## Downloads and related projects
+## Related projects
 
-- [Download FidoParole Reader 0.1.4-test](apks/fidoparole-android-reader-0.1.4-test.apk?raw=true)
-- [APK archive](apks/) and [SHA-256 checksums](apks/SHA256SUMS)
 - [Token2 FidoParole](https://github.com/token2/fidoparole), the original project and desktop vault manager.
 - [Ordanexa KeePassDX-FIDO2](https://github.com/ordanexa/KeePassDX-FIDO2), an experimental fork that unlocks KeePass databases on Android with an enrolled Token2 USB security key and its PIN.
 
 ## License
 
 The original Ordanexa reader code and documentation are available under the [MIT License](LICENSE). See [NOTICE.md](NOTICE.md) for Token2 artwork and third-party notices.
+
+## Changes in 0.1.4-test
+
+- Added optional biometric unlock with a PIN encrypted by an app-specific Android Keystore key.
+- Added **Forget saved PIN** and retained manual PIN entry.
+- Version code 5. The archived build uses the same signing certificate as the previous test builds.
 
 ## Changes in 0.1.1-test
 
