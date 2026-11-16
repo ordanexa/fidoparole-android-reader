@@ -82,7 +82,8 @@ See the [validation report](docs/VALIDATION.md), [device checklist](docs/DEVICE_
 
 ## Downloads and related projects
 
-- [Archived APKs and SHA-256 checksums for 0.1.0–0.1.3](apks/)
+- [Download FidoParole Reader 0.1.4-test](apks/fidoparole-android-reader-0.1.4-test.apk?raw=true)
+- [APK archive](apks/) and [SHA-256 checksums](apks/SHA256SUMS)
 - [Token2 FidoParole](https://github.com/token2/fidoparole), the original project and desktop vault manager.
 - [Ordanexa KeePassDX-FIDO2](https://github.com/ordanexa/KeePassDX-FIDO2), an experimental fork that unlocks KeePass databases on Android with an enrolled Token2 USB security key and its PIN.
 
