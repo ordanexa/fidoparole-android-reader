@@ -19,8 +19,12 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-      - name: Install Android build tools
-        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - name: Verify preinstalled Android build tools
+        shell: bash
+        run: |
+          test -n "$ANDROID_HOME"
+          test -f "$ANDROID_HOME/platforms/android-35/android.jar"
+          test -x "$ANDROID_HOME/build-tools/35.0.0/apksigner"
       - name: Build with preserved signing identity
         env:
           KEYSTORE_BASE64: ${{ secrets.READER_KEYSTORE_BASE64 }}
