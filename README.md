@@ -1,10 +1,10 @@
 # FidoParole Reader
 
-A small native Android app for **reading existing FidoParole vaults over USB-C**, revealing passwords and copying them. This is the final intended scope, not the beginning of a full password manager.
+An unofficial Android community companion by [Ordanexa](https://github.com/ordanexa). It reads existing FidoParole vaults over USB-C and lets you show or copy passwords. Use [Token2 FidoParole Desktop](https://github.com/token2/fidoparole) to manage and back up vaults.
 
-An independent, unofficial community reader. Vault management and backups remain in Token2 FidoParole Desktop.
+## Status
 
-## Status: 0.1.3-test (2026-11-14)
+The latest build is **0.1.3-test** (2026-11-14). There is no planned development schedule. This build supports USB-C only.
 
 - Signed, installable APK; package `com.ordanexa.fidoreader`.
 - Android 13+ (API 33). Version 0.1.2-test was successfully tested by Pascal on a Samsung S24 and tablet.
@@ -51,17 +51,7 @@ export ANDROID_HOME=/path/to/android-sdk
 
 Output: `dist/fidoparole-android-reader-0.1.3-test.apk` and `dist/SHA256SUMS`.
 
-Without custom signing variables, the build creates a **temporary test key** at `build/test-signing.jks`. It is excluded from Git and source archives. The known test keystore password does not protect release signing. The existing APK signing identity has now been preserved in a protected PKCS12 backup and configured in GitHub Actions Secrets. See [signing and recovery](docs/SIGNING.md). For a local build using that backup:
-
-```bash
-export READER_KEYSTORE=/secure/path/fidoparole-reader-signing.p12
-export READER_KEY_ALIAS=fidoparole-reader
-read -rs -p 'Keystore password: ' READER_STORE_PASS; export READER_STORE_PASS
-read -rs -p 'Key password: ' READER_KEY_PASS; export READER_KEY_PASS
-./build.sh
-```
-
-An update requires the same signing identity. A different key requires uninstalling the previous test build; the app has no persisted vault data. Never place private signing keys in Git or the handoff folder.
+By default, the build creates a local test key at `build/test-signing.jks`. See [APK signing](docs/SIGNING.md) for custom signing and update compatibility.
 
 ## Tests
 
@@ -85,15 +75,15 @@ See the [validation report](docs/VALIDATION.md), [device checklist](docs/DEVICE_
 - The USB transport closes after reading. Android's detach broadcast locks the displayed entries when the key is unplugged.
 - The app does not log PINs, passwords or CTAP dumps.
 
-## Repository and handoff
+## Downloads and related projects
 
-Private repository: [pascalep/fidoparole-android-reader](https://github.com/pascalep/fidoparole-android-reader).
+- [Archived APKs and SHA-256 checksums for 0.1.0–0.1.3](apks/)
+- [Token2 FidoParole](https://github.com/token2/fidoparole), the original project and desktop vault manager.
+- [Ordanexa KeePassDX-FIDO2](https://github.com/ordanexa/KeePassDX-FIDO2), an experimental fork that unlocks KeePass databases on Android with an enrolled Token2 USB security key and its PIN.
 
-The tested 0.1.2 source was imported as the baseline, together with tests and documentation. Version 0.1.3 adds the English interface and documentation. The separate infrastructure-toolbox repository is unchanged.
+## License
 
-Raw source handoff files are maintained under `outbox/fidoparole-android-reader/`. All released test APKs (0.1.0–0.1.3) are archived unchanged in [apks/](apks/) with SHA-256 checksums. Build working directories remain excluded. Source ZIPs are not required for source recovery.
-
-Before production use: complete the outstanding device/lifecycle checks and verify the independent KeePass signing-key recovery copy. The signed GitHub build was successfully verified on 2026-11-14.
+The original Ordanexa reader code and documentation are available under the [MIT License](LICENSE). See [NOTICE.md](NOTICE.md) for Token2 artwork and third-party notices.
 
 ## Changes in 0.1.1-test
 
