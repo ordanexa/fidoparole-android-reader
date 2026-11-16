@@ -91,7 +91,7 @@ Private repository: [pascalep/fidoparole-android-reader](https://github.com/pasc
 
 The tested 0.1.2 source was imported as the baseline, together with tests and documentation. Version 0.1.3 adds the English interface and documentation. The separate infrastructure-toolbox repository is unchanged.
 
-Raw source handoff files are maintained under `outbox/fidoparole-android-reader/`. Generated test artifacts belong under `artifacts/` and are excluded from the source repository.
+Raw source handoff files are maintained under `outbox/fidoparole-android-reader/`. All released test APKs (0.1.0–0.1.3) are archived unchanged in [apks/](apks/) with SHA-256 checksums. Build working directories remain excluded. Source ZIPs are not required for source recovery.
 
 Before production use: complete the outstanding device/lifecycle checks, establish a dedicated signing key and retain independent recovery copies.
 
