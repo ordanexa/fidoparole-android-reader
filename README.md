@@ -51,11 +51,11 @@ export ANDROID_HOME=/path/to/android-sdk
 
 Output: `dist/fidoparole-android-reader-0.1.3-test.apk` and `dist/SHA256SUMS`.
 
-Without custom signing variables, the build creates a **temporary test key** at `build/test-signing.jks`. It is excluded from Git and source archives. The known test keystore password does not protect release signing. For durable private releases, manage and back up a dedicated signing key locally:
+Without custom signing variables, the build creates a **temporary test key** at `build/test-signing.jks`. It is excluded from Git and source archives. The known test keystore password does not protect release signing. The existing APK signing identity has now been preserved in a protected PKCS12 backup and configured in GitHub Actions Secrets. See [signing and recovery](docs/SIGNING.md). For a local build using that backup:
 
 ```bash
-export READER_KEYSTORE=/secure/path/private-reader.jks
-export READER_KEY_ALIAS=reader
+export READER_KEYSTORE=/secure/path/fidoparole-reader-signing.p12
+export READER_KEY_ALIAS=fidoparole-reader
 read -rs -p 'Keystore password: ' READER_STORE_PASS; export READER_STORE_PASS
 read -rs -p 'Key password: ' READER_KEY_PASS; export READER_KEY_PASS
 ./build.sh
@@ -93,7 +93,7 @@ The tested 0.1.2 source was imported as the baseline, together with tests and do
 
 Raw source handoff files are maintained under `outbox/fidoparole-android-reader/`. All released test APKs (0.1.0–0.1.3) are archived unchanged in [apks/](apks/) with SHA-256 checksums. Build working directories remain excluded. Source ZIPs are not required for source recovery.
 
-Before production use: complete the outstanding device/lifecycle checks, establish a dedicated signing key and retain independent recovery copies.
+Before production use: complete the outstanding device/lifecycle checks and verify the independent KeePass signing-key recovery copy. The signed GitHub build was successfully verified on 2026-11-14.
 
 ## Changes in 0.1.1-test
 
