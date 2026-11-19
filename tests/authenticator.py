@@ -76,6 +76,7 @@ def respond(raw):
         if mode=='wrong_pin': return 0x31
         return {2:proto.encrypt(shared,token)}
     if cmd == 2:
+        if mode == "touch_timeout": return 0x2f
         assert args[1]==RP and args[5]=={'up':True}
         assert hmac.compare_digest(args[6],proto.authenticate(token,args[2]))
         ext=args[4]
