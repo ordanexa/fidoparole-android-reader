@@ -1,0 +1,58 @@
+name: Build Reader 0.1.6 test APK
+on:
+  push:
+    branches: [build/reader-0.1.6]
+    paths: [.github/workflows/build-reader-0.1.6.yml]
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Install Android build dependencies
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'platforms;android-35' 'build-tools;35.0.0'
+      - name: Run independent protocol regression tests
+        run: |
+          python3 -m venv "$RUNNER_TEMP/reader-tests"
+          . "$RUNNER_TEMP/reader-tests/bin/activate"
+          pip install -r tests/requirements.txt
+          bash test.sh
+      - name: Build, sign and verify
+        env:
+          KEYSTORE_BASE64: ${{ secrets.READER_KEYSTORE_BASE64 }}
+          READER_STORE_PASS: ${{ secrets.READER_SIGNING_PASSWORD }}
+          READER_KEY_PASS: ${{ secrets.READER_SIGNING_PASSWORD }}
+          READER_KEY_ALIAS: fidoparole-reader
+        run: |
+          set -euo pipefail
+          test -n "$KEYSTORE_BASE64"
+          test -n "$READER_STORE_PASS"
+          umask 077
+          export READER_KEYSTORE="$RUNNER_TEMP/reader-signing.p12"
+          trap 'rm -f "$READER_KEYSTORE"' EXIT
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$READER_KEYSTORE"
+          unset KEYSTORE_BASE64
+          bash build.sh
+          apk=dist/fidoparole-android-reader-0.1.6-test.apk
+          tools="$ANDROID_HOME/build-tools/35.0.0"
+          "$tools/apksigner" verify --print-certs "$apk" > "$RUNNER_TEMP/signature.txt"
+          grep -Fx 'Signer #1 certificate SHA-256 digest: 707f6d453412ec20afbf0aa498d6c63d07c3d4548688030b45f5cd7b04c8b485' "$RUNNER_TEMP/signature.txt"
+          "$tools/zipalign" -c -p 4 "$apk"
+          "$tools/aapt" dump badging "$apk" > "$RUNNER_TEMP/badging.txt"
+          grep -F "package: name='com.ordanexa.fidoreader' versionCode='7' versionName='0.1.6-test'" "$RUNNER_TEMP/badging.txt"
+      - name: Upload signed APK and checksum
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: reader-0.1.6-signed
+          path: dist/
+          if-no-files-found: error
+          retention-days: 90
