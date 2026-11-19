@@ -19,6 +19,34 @@ final class UsbIo implements Hid.Io {
         if(connection==null)throw new IOException("Could not open USB device");
         if(!connection.claimInterface(intf,true)){connection.close();throw new IOException("USB interface is busy");}
     }
+    String readToken2Serial() throws Exception {
+        final long deadline = System.nanoTime() + 3000000000L;
+        return TokenSerial.read(new TokenSerial.Reports() {
+            private void checkOpen() throws IOException {
+                if (closed) throw new IOException("USB connection closed");
+                if (System.nanoTime() >= deadline) throw new IOException("Token2 serial query timed out");
+            }
+
+            public void send(byte[] report) throws Exception {
+                checkOpen();
+                // HIDAPI removes report ID zero before the USB control transfer.
+                int count = connection.controlTransfer(0x21, 0x09, 0x0300, intf.getId(),
+                        report, report.length, 500);
+                if (count != report.length) throw new IOException("Token2 serial request failed");
+            }
+
+            public byte[] receive() throws Exception {
+                checkOpen();
+                byte[] report = new byte[64];
+                int count = connection.controlTransfer(0xa1, 0x01, 0x0300, intf.getId(),
+                        report, report.length, 500);
+                if (count < 3) throw new IOException("Token2 serial response unavailable");
+                if ((report[1] & 0xf0) == 0xc0) Thread.sleep(20);
+                return java.util.Arrays.copyOf(report, count);
+            }
+        });
+    }
+
     void transfer(UsbEndpoint endpoint,ByteBuffer buffer,long deadline)throws Exception{
         if(closed)throw new IOException("USB connection closed");
         UsbRequest request=new UsbRequest();
