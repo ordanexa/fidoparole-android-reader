@@ -4,13 +4,15 @@ on:
     branches: [build/reader-0.1.5]
     paths: [.github/workflows/build-reader-0.1.5.yml]
 permissions:
-  contents: write
+  contents: read
 jobs:
   build:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
       - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3
         with:
           distribution: temurin
@@ -47,15 +49,10 @@ jobs:
           "$tools/zipalign" -c -p 4 "$apk"
           "$tools/aapt" dump badging "$apk" > "$RUNNER_TEMP/badging.txt"
           grep -F "package: name='com.ordanexa.fidoreader' versionCode='6' versionName='0.1.5-test'" "$RUNNER_TEMP/badging.txt"
-      - name: Commit verified APK and checksum
-        run: |
-          set -euo pipefail
-          apk=fidoparole-android-reader-0.1.5-test.apk
-          test ! -e "apks/$apk"
-          install -m 644 "dist/$apk" "apks/$apk"
-          (cd apks && sha256sum "$apk" >> SHA256SUMS && sha256sum -c SHA256SUMS)
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -- "apks/$apk" apks/SHA256SUMS
-          git commit -m 'Archive signed FidoParole Reader 0.1.5 test APK'
-          git push origin HEAD:refs/heads/build/reader-0.1.5
+      - name: Upload signed APK and checksum
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: reader-0.1.5-signed
+          path: dist/
+          if-no-files-found: error
+          retention-days: 90
