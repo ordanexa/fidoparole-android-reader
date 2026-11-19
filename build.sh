@@ -27,6 +27,6 @@ fi
 : "${READER_STORE_PASS:?Required for signing}"
 : "${READER_KEY_PASS:?Required for signing}"
 : "${READER_KEY_ALIAS:?Required for signing}"
-"$bt/apksigner" sign --ks "$READER_KEYSTORE" --ks-key-alias "$READER_KEY_ALIAS" --ks-pass env:READER_STORE_PASS --key-pass env:READER_KEY_PASS --out dist/fidoparole-android-reader-0.1.4-test.apk build/aligned.apk
-"$bt/apksigner" verify --verbose --print-certs dist/fidoparole-android-reader-0.1.4-test.apk
+"$bt/apksigner" sign --ks "$READER_KEYSTORE" --ks-key-alias "$READER_KEY_ALIAS" --ks-pass env:READER_STORE_PASS --key-pass env:READER_KEY_PASS --out dist/fidoparole-android-reader-0.1.5-test.apk build/aligned.apk
+"$bt/apksigner" verify --verbose --print-certs dist/fidoparole-android-reader-0.1.5-test.apk
 sha256sum dist/*.apk > dist/SHA256SUMS

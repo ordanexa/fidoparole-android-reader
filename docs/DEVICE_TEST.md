@@ -59,3 +59,17 @@ Do not share PINs, master passwords or sensitive entry names. After a PIN error,
 ## Recorded result
 
 On 2026-11-14 Pascal confirmed successful use of **0.1.2-test** on both a Samsung S24 and tablet. This is not a separate confirmation of every checklist item. Device checks for **0.1.3-test** and **0.1.4-test** are pending.
+
+## Simplified login (0.1.5-test)
+
+1. Install over 0.1.4 with an existing saved PIN. Open the reader with the key connected and grant USB access if Android requests it. Confirm biometric authentication starts automatically once.
+2. Complete fingerprint authentication, then touch the token when it blinks. Confirm the vault opens.
+3. Return to the app after backgrounding it. Choose **Use PIN** in the biometric prompt. Confirm the PIN form appears and biometric authentication does not restart by itself. Confirm manual PIN unlock works.
+4. Cancel with Android Back. Confirm the same manual fallback. Retry biometric authentication by reopening the app.
+5. Unplug the key during the biometric prompt or same-key confirmation. Confirm the prompt closes and vault data remains hidden.
+6. With no key, confirm only connection controls appear. With a permitted key, confirm the connection button disappears.
+7. Open **PIN options**, forget the saved PIN and confirm manual login appears. Save the PIN again using the checkbox and verify automatic biometric login on the next app opening.
+8. Switch between the reader and other USB apps while the key remains connected. Record each app's USB permission and attachment chooser behavior separately.
+9. With an empty vault, confirm successful unlock remains open without a repeated biometric prompt.
+
+The user confirmed 0.1.4 fingerprint unlock followed by token touch on the tablet on 2026-11-16. The 0.1.5 checks above remain pending.

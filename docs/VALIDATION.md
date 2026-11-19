@@ -66,3 +66,9 @@ Simulator checks do not replace these tests. Use a dummy password for outstandin
 On 2026-11-16, GitHub Actions rebuilt the reader from source commit `d3afbdae317d49e3a0d8f33af014aa071ada7f89` and verified the APK signature against the existing Reader certificate. The run verified the package `com.ordanexa.fidoreader`, version code 5 and version name `0.1.4-test`. SHA-256 verification passed for all APKs in the archive. [Build run](https://github.com/ordanexa/fidoparole-android-reader/actions/runs/43957380767) · [SHA-256 checksums](../apks/SHA256SUMS)
 
 On-device USB and biometric checks for this build are pending. Follow the [device checklist](DEVICE_TEST.md#saved-pin-and-biometric-unlock-014-test).
+
+## Version 0.1.5-test
+
+The simplified login introduces automatic biometric prompting and an explicit PIN fallback. Existing USB protocol tests run during the signed build. Build validation verifies the package, version code 6, version name 0.1.5-test, preserved signing certificate, alignment and all archived APK checksums.
+
+Physical USB, Android biometric lifecycle and layout checks remain pending. Follow the [0.1.5 device checklist](DEVICE_TEST.md#simplified-login-015-test). The user confirmed 0.1.4 fingerprint unlock followed by token touch on the tablet on 2026-11-16.
