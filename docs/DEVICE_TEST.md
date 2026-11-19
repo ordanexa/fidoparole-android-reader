@@ -73,3 +73,15 @@ On 2026-11-14 Pascal confirmed successful use of **0.1.2-test** on both a Samsun
 9. With an empty vault, confirm successful unlock remains open without a repeated biometric prompt.
 
 The user confirmed 0.1.4 fingerprint unlock followed by token touch on the tablet on 2026-11-16. The 0.1.5 checks above remain pending.
+
+## Token2 serial identification (0.1.6-test)
+
+1. Update over 0.1.5 and connect the existing Token2 PIN+ Dual. Grant USB access if requested. Confirm serial identification finishes without the old same-key confirmation dialog.
+2. For an old `no-usb-serial` PIN record, enter the known PIN manually and select **Replace saved PIN on this device**. Complete fingerprint authentication and the normal token touch. Confirm the vault opens.
+3. Background and reopen the reader, then unplug/replug the same key. Confirm automatic fingerprint authentication after identification and normal vault unlock after touch.
+4. Connect the backup key. Confirm the main key's saved PIN is not offered. Manual PIN entry should be available. Saving the backup key replaces the app's one saved-PIN record.
+5. Unplug or background the app while it reads the serial. Confirm no stale biometric prompt appears and another app can access the key afterward.
+6. For a key that rejects serial queries, confirm manual PIN login remains available and no unbound PIN can be saved or used automatically.
+7. Cancel biometric authentication and confirm **Use PIN** still works. Verify existing vault contents in FidoParole Desktop.
+
+Physical serial-query support and Android lifecycle checks for this build remain pending. Report status text and app version, without sharing PINs or vault entries.

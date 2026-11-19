@@ -1,6 +1,6 @@
 # APK signing
 
-The [archived test APKs](../apks/) for 0.1.0–0.1.5 use the same signing certificate. Its SHA-256 fingerprint is:
+The [archived test APKs](../apks/) for 0.1.0–0.1.6 use the same signing certificate. Its SHA-256 fingerprint is:
 
 `707f6d453412ec20afbf0aa498d6c63d07c3d4548688030b45f5cd7b04c8b485`
 

@@ -30,7 +30,7 @@ final class SavedPinStore {
     }
 
     boolean matches(String tokenId) {
-        return hasPin() && tokenId.equals(preferences.getString("token", ""));
+        return tokenId != null && hasPin() && tokenId.equals(preferences.getString("token", ""));
     }
 
     Cipher encryptCipher() throws Exception {

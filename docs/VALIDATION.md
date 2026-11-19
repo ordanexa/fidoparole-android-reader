@@ -72,3 +72,11 @@ On-device USB and biometric checks for this build are pending. Follow the [devic
 The simplified login introduces automatic biometric prompting and an explicit PIN fallback. Existing USB protocol tests run during the signed build. On 2026-11-19, [GitHub Actions run 44599361586](https://github.com/ordanexa/fidoparole-android-reader/actions/runs/44599361586) passed all 154 protocol checks, compiled the Android app and verified the package, version code 6, version name 0.1.5-test, preserved signing certificate and APK alignment. The downloaded artifact checksum was independently recomputed before archiving.
 
 Physical USB, Android biometric lifecycle and layout checks remain pending. Follow the [0.1.5 device checklist](DEVICE_TEST.md#simplified-login-015-test). The user confirmed 0.1.4 fingerprint unlock followed by token touch on the tablet on 2026-11-16.
+
+## Version 0.1.6-test
+
+The Token2 serial reader sends one fixed read-only GET_INFO APDU over unnumbered HID feature reports. New JVM tests verify the exact request bytes, vendor serial response decoding, fragmented responses, polling, sequence checks, malformed frames, status failures and invalid serial identifiers. Existing protocol tests cover PIN error handling without automatic retries.
+
+Identification runs off the UI thread with bounded control-transfer timeouts. Backgrounding or unplugging closes the handle and invalidates pending results. Unknown legacy PIN records are never silently rebound to the connected key. A successful manual unlock can save a new serial-bound encrypted record.
+
+Physical Token2 serial-query and Android lifecycle testing remains pending. Follow the [0.1.6 checklist](DEVICE_TEST.md#token2-serial-identification-016-test).
