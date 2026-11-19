@@ -82,3 +82,11 @@ Identification runs off the UI thread with bounded control-transfer timeouts. Ba
 Physical Token2 serial-query and Android lifecycle testing remains pending. Follow the [0.1.6 checklist](DEVICE_TEST.md#token2-serial-identification-016-test).
 
 On 2026-11-19, [build run 44602305117](https://github.com/ordanexa/fidoparole-android-reader/actions/runs/44602305117) passed the new serial tests and all 154 existing protocol checks. The Android build verified package `com.ordanexa.fidoreader`, version code 7, version name `0.1.6-test`, APK alignment and the preserved signing certificate. The artifact and APK SHA-256 hashes were recomputed before archiving.
+
+## Version 0.1.7-test
+
+The token-presence stage emits a distinct awaiting-touch event before getAssertion and clears it in a finally block. JVM regressions check balanced prompt events on successful unlock, simulated token-touch timeout and subsequent failures, and no touch prompt before failed PIN verification. Existing serial framing tests also run.
+
+Android popup placement, fingerprint-to-touch transition, Cancel/Back, unplugging and background behavior remain pending physical-device verification. Follow the [0.1.7 checklist](DEVICE_TEST.md#fingerprint-and-touch-prompts-017-test).
+
+On 2026-11-19, [build run 44609784131](https://github.com/ordanexa/fidoparole-android-reader/actions/runs/44609784131) passed 185 protocol/touch-event assertions and the serial tests. Package `com.ordanexa.fidoreader`, version code 8, version name `0.1.7-test`, alignment and preserved signing certificate were verified. Artifact and APK SHA-256 hashes were independently recomputed before archiving.

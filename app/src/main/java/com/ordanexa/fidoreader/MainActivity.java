@@ -36,6 +36,7 @@ public final class MainActivity extends Activity {
     private CheckBox savePin;
     private SavedPinStore pinStore;
     private CancellationSignal biometricSignal;
+    private AlertDialog touchPrompt;
     private byte[] pendingManualPin;
     private static final int STRONG_BIOMETRIC = BiometricManager.Authenticators.BIOMETRIC_STRONG;
 
@@ -114,7 +115,7 @@ public final class MainActivity extends Activity {
         vaultHeader=row();vaultHeader.setPadding(0,dp(2),0,dp(14));vaultCount=text("Your entries",21,INK);vaultCount.setTypeface(Typeface.DEFAULT,Typeface.BOLD);vaultHeader.addView(vaultCount,new LinearLayout.LayoutParams(0,-2,1));
         Button lock=button("Lock",false);vaultHeader.addView(lock,new LinearLayout.LayoutParams(dp(106),dp(46)));lock.setOnClickListener(v->{lock("Vault locked.");clearOwnClipboard();});vaultHeader.setVisibility(View.GONE);root.addView(vaultHeader);
         entries=column();root.addView(entries);
-        space(root,14);TextView footer=text("Unofficial community reader · 0.1.6-test\nManage & back up in FidoParole Desktop",12,MUTED);footer.setGravity(Gravity.CENTER);footer.setLineSpacing(dp(3),1);root.addView(footer);
+        space(root,14);TextView footer=text("Unofficial community reader · 0.1.7-test\nManage & back up in FidoParole Desktop",12,MUTED);footer.setGravity(Gravity.CENTER);footer.setLineSpacing(dp(3),1);root.addView(footer);
         IntentFilter filter=new IntentFilter(USB_PERMISSION);filter.addAction(UsbManager.ACTION_USB_DEVICE_DETACHED);
         filter.addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED);
         registerReceiver(receiver,filter,Context.RECEIVER_NOT_EXPORTED);receiverRegistered=true;
@@ -157,7 +158,7 @@ public final class MainActivity extends Activity {
             String tokenId=selectedTokenId();
             pendingManualPin=value;
             try{
-                authenticate("Protect saved PIN",pinStore.encryptCipher(),cipher->{
+                authenticate("Scan your fingerprint",pinStore.encryptCipher(),cipher->{
                     SavedPinStore.PendingPin sealed=pinStore.seal(cipher,tokenId,value);
                     pendingManualPin=null;
                     runUnlock(value,sealed,false);
@@ -173,13 +174,23 @@ public final class MainActivity extends Activity {
 
     private void runUnlock(byte[] value,SavedPinStore.PendingPin sealed,boolean fromSaved){
         if(!canUnlock()||value.length<4||value.length>63){Crypto.wipe(value);return;}
-        lock("Touch your security key when it blinks …");final int operation=++generation;busy=true;unlock.setEnabled(false);connect.setEnabled(false);pin.setEnabled(false);refreshPinControls();
+        lock("Connecting to security key …");final int operation=++generation;busy=true;unlock.setEnabled(false);connect.setEnabled(false);pin.setEnabled(false);refreshPinControls();
         final UsbIo io;
         try{io=new UsbIo(usb,selected);transport=io;}catch(Exception e){Crypto.wipe(value);busy=false;unlock.setEnabled(true);connect.setEnabled(true);pin.setEnabled(true);status.setText(e.getMessage());refreshPinControls();return;}
         worker.execute(()->{
             List<Reader.Vault> vaults=null;List<Entry> decoded=new ArrayList<>();Exception failure=null;
             try(Hid hid=new Hid(io)){
-                Reader reader=new Reader(hid,msg->main.post(()->{if(generation==operation)status.setText(msg);}));
+                Reader reader=new Reader(hid,new Reader.Progress(){
+                    public void update(String message){
+                        main.post(()->{if(generation==operation&&foreground)status.setText(message);});
+                    }
+                    public void awaitingTouch(boolean waiting){
+                        main.post(()->{
+                            if(generation!=operation||!foreground)return;
+                            if(waiting)showTouchPrompt();else dismissTouchPrompt();
+                        });
+                    }
+                });
                 vaults=reader.unlock(value);
                 for(Reader.Vault vault:vaults){
                     JSONObject doc=new JSONObject(new String(vault.json,StandardCharsets.UTF_8));
@@ -192,6 +203,7 @@ public final class MainActivity extends Activity {
             final Exception error=failure;
             main.post(()->{
                 if(generation!=operation||!foreground){for(Entry e:decoded)e.close();return;}
+                dismissTouchPrompt();
                 transport=null;busy=false;unlock.setEnabled(selected!=null&&usb.hasPermission(selected));connect.setEnabled(true);pin.setEnabled(true);
                 refreshPinControls();
                 if(error!=null){
@@ -211,6 +223,26 @@ public final class MainActivity extends Activity {
             });
         });
     }
+    private void showTouchPrompt(){
+        if(touchPrompt!=null)return;
+        touchPrompt=new AlertDialog.Builder(this,android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                .setIcon(R.drawable.fidoparole_mark)
+                .setTitle("Touch your security key")
+                .setMessage("Touch the blinking Token2 to continue.")
+                .setNegativeButton("Cancel",(dialog,which)->lock("Unlock cancelled."))
+                .setOnCancelListener(dialog->lock("Unlock cancelled."))
+                .create();
+        touchPrompt.setCanceledOnTouchOutside(false);
+        touchPrompt.show();
+        touchPrompt.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
+    }
+
+    private void dismissTouchPrompt(){
+        AlertDialog dialog=touchPrompt;
+        touchPrompt=null;
+        if(dialog!=null)dialog.dismiss();
+    }
+
     private boolean canUnlock(){
         return !busy&&!identifying&&biometricSignal==null&&foreground&&selected!=null&&usb.hasPermission(selected);
     }
@@ -330,7 +362,7 @@ public final class MainActivity extends Activity {
     private void unlockSavedPin(String tokenId){
         if(!canUnlock()||!tokenId.equals(selectedTokenId()))return;
         try{
-            authenticate("Unlock with saved PIN",pinStore.decryptCipher(tokenId),
+            authenticate("Scan your fingerprint",pinStore.decryptCipher(tokenId),
                     cipher->runUnlock(pinStore.read(cipher,tokenId),null,true));
         }catch(Exception e){
             showManualPin();
@@ -349,7 +381,7 @@ public final class MainActivity extends Activity {
         refreshPinControls();
         new BiometricPrompt.Builder(this).setTitle(title)
                 .setAllowedAuthenticators(STRONG_BIOMETRIC)
-                .setSubtitle("Then touch your security key when it blinks")
+                .setSubtitle("Use the fingerprint sensor on your phone or tablet")
                 .setNegativeButton("Use PIN",getMainExecutor(),(dialog,which)->{
                     if(biometricSignal==signal)showManualPin();
                 })
@@ -418,7 +450,7 @@ public final class MainActivity extends Activity {
         if(clipboardLabel==null)return;ClipboardManager cb=(ClipboardManager)getSystemService(CLIPBOARD_SERVICE);
         try{ClipDescription desc=cb.getPrimaryClipDescription();if(desc!=null&&clipboardLabel.contentEquals(desc.getLabel())){cb.clearPrimaryClip();clipboardLabel=null;}else if(foreground)clipboardLabel=null;}catch(SecurityException ignored){}
     }
-    synchronized void lock(String message){cancelBiometric();generation++;identifying=false;main.removeCallbacks(autoLock);if(transport!=null){transport.close();transport=null;}busy=false;
+    synchronized void lock(String message){dismissTouchPrompt();cancelBiometric();generation++;identifying=false;main.removeCallbacks(autoLock);if(transport!=null){transport.close();transport=null;}busy=false;
         clearPasswordViews();for(Entry e:secrets)e.close();secrets.clear();if(entries!=null)entries.removeAllViews();if(pin!=null){pin.setText("");pin.setEnabled(true);}if(connect!=null)connect.setEnabled(true);if(unlock!=null)unlock.setEnabled(selected!=null&&usb.hasPermission(selected));if(status!=null)status.setText(message);if(unlockPanel!=null)showUnlocked(false);if(deviceDetail!=null&&selected!=null)deviceDetail.setText("USB-C · Vault locked");refreshPinControls();
     }
     @Override protected void onResume(){super.onResume();foreground=true;findToken(true);if(clipboardLabel!=null&&SystemClock.elapsedRealtime()>=clipboardExpiry)clearOwnClipboard();}

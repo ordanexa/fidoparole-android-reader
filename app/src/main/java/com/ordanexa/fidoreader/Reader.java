@@ -5,7 +5,10 @@ import java.util.*;
 /** Only discovery, PIN authentication, assertions and largeBlob GET are allowed. */
 final class Reader {
     static final String RP="fido2-vault.token2";
-    interface Progress {void update(String text);}
+    interface Progress {
+        void update(String text);
+        default void awaitingTouch(boolean waiting) {}
+    }
     final Hid hid;final Progress progress;
     Reader(Hid hid,Progress progress){this.hid=hid;this.progress=progress;}
     static void requireReadOnly(int command,Map<Object,Object> args)throws Exception{
@@ -61,7 +64,13 @@ final class Reader {
                 byte[] enc=agreement.encrypt(salt),clientHash=Crypto.random(32),auth=Crypto.hmac(token,clientHash);
                 if(version==1)auth=Arrays.copyOf(auth,16);
                 progress.update("Touch the key when it blinks …");
-                Object first=command(2,Cbor.map(1,RP,2,clientHash,4,Cbor.map("hmac-secret",Cbor.map(1,agreement.publicKey,2,enc,3,agreement.authenticate(enc),4,version),"largeBlobKey",true),5,Cbor.map("up",true),6,auth,7,version));
+                Object first;
+                progress.awaitingTouch(true);
+                try {
+                    first=command(2,Cbor.map(1,RP,2,clientHash,4,Cbor.map("hmac-secret",Cbor.map(1,agreement.publicKey,2,enc,3,agreement.authenticate(enc),4,version),"largeBlobKey",true),5,Cbor.map("up",true),6,auth,7,version));
+                } finally {
+                    progress.awaitingTouch(false);
+                }
                 Crypto.wipe(token);token=null;
                 Object countValue=Cbor.get(first,5);long count=countValue==null?1:Cbor.number(countValue);
                 if(count<1||count>64)throw new IOException("Unexpected credential count");assertions.add(first);

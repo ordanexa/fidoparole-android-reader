@@ -40,12 +40,19 @@ public final class ReaderTest {
         rejects(()->Reader.requireReadOnly(12,Cbor.map(2,new byte[]{1},3,0)),"blob write");
         rejects(()->Reader.requireReadOnly(6,Cbor.map(1,2,2,4)),"PIN change");
         rejects(()->Reader.requireReadOnly(6,Cbor.map(1,2,2,9,9,16,10,Reader.RP)),"write permission");
-        for(String mode:new String[]{"v1","v2","format1","wrong_pin","low_retries","checksum","no_uv","vault_tamper","wrong_secret"}){
+        for(String mode:new String[]{"v1","v2","format1","wrong_pin","low_retries","checksum","no_uv","vault_tamper","wrong_secret","touch_timeout"}){
             try(Hid hid=new Hid(new Sim(mode))){
-                Reader reader=new Reader(hid,s->{});boolean success=mode.equals("v1")||mode.equals("v2")||mode.equals("format1");byte[] pin=Crypto.utf8("123456");
+                List<Boolean> touchEvents=new ArrayList<>();
+                Reader reader=new Reader(hid,new Reader.Progress(){
+                    public void update(String message){}
+                    public void awaitingTouch(boolean waiting){touchEvents.add(waiting);}
+                });boolean success=mode.equals("v1")||mode.equals("v2")||mode.equals("format1");byte[] pin=Crypto.utf8("123456");
                 if(success){List<Reader.Vault> vaults=reader.unlock(pin);check(vaults.size()==2,"multiple assertions");for(Reader.Vault v:vaults){check(new String(v.json,java.nio.charset.StandardCharsets.UTF_8).contains("dummy-copy-password"),"independent decryption "+mode);v.close();}}
                 else rejects(()->reader.unlock(pin),"must reject "+mode);
                 check(Arrays.equals(pin,new byte[pin.length]),"PIN wiped "+mode);
+                check(touchEvents.isEmpty()||touchEvents.equals(Arrays.asList(true,false)),"balanced touch prompt "+mode);
+                if(mode.equals("wrong_pin")||mode.equals("low_retries"))check(touchEvents.isEmpty(),"no touch before PIN verification");
+                if(success||mode.equals("touch_timeout"))check(touchEvents.equals(Arrays.asList(true,false)),"touch prompt completes "+mode);
             }
             System.out.println("PASS "+mode);
         }

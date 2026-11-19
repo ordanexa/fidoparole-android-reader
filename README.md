@@ -4,11 +4,11 @@ An unofficial Android community companion by [Ordanexa](https://github.com/ordan
 
 ## Current test build
 
-[Download FidoParole Reader 0.1.6-test](apks/fidoparole-android-reader-0.1.6-test.apk?raw=true) · [SHA-256 checksums](apks/SHA256SUMS) · [APK archive](apks/)
+[Download FidoParole Reader 0.1.7-test](apks/fidoparole-android-reader-0.1.7-test.apk?raw=true) · [SHA-256 checksums](apks/SHA256SUMS) · [APK archive](apks/)
 
-Version **0.1.6-test** (2026-11-19) adds the Token2 serial-number query to the compact login. With a matching saved PIN and strong biometrics available, opening the reader or connecting a key while it is open starts biometric authentication automatically. Choose **Use PIN** in the prompt to enter the token PIN manually. Cancelling or failing biometric authentication also shows the PIN form without automatically retrying.
+Version **0.1.7-test** (2026-11-19) presents fingerprint authentication and token touch as two distinct prompts. With a matching saved PIN and strong biometrics available, opening the reader or connecting a key while it is open starts biometric authentication automatically. Choose **Use PIN** in the prompt to enter the token PIN manually. Cancelling or failing biometric authentication also shows the PIN form without automatically retrying.
 
-After authentication, touch the Token2 when it blinks. The fingerprint prompt and unlock status both describe this step. The connection button appears only while USB access is needed. **PIN options → Forget saved PIN** removes this app's stored PIN.
+The biometric prompt says **Scan your fingerprint** and directs you to the phone or tablet fingerprint sensor. When the vault request needs token presence, a separate **Touch your security key** popup appears. Touch the blinking Token2. The popup closes automatically when the token responds. **Cancel** or Android Back cancels the unlock and closes the USB connection. The connection button appears only while USB access is needed. **PIN options → Forget saved PIN** removes this app's stored PIN.
 
 On first setup, enter the token PIN and optionally select **Save PIN for fingerprint unlock**. The encrypted PIN is saved only after the vault opens successfully. Saving for another token replaces the current saved PIN. Each app stores its own encrypted PIN independently.
 
@@ -19,11 +19,11 @@ After updating from a build that saved a PIN under `no-usb-serial`, enter the PI
 The serial query uses the fixed read command implemented in [Token2's reference client](https://github.com/token2/token2-otp-cli/blob/c12197949271600f5576ce90ce5190fe2a84e7f5/token2/__init__.py) and [protocol reference](https://github.com/token2/token2-otp-cli/blob/c12197949271600f5576ce90ce5190fe2a84e7f5/docs/Token2-OTP-SDK-Protocol.md#610-read-serial-number). It runs in the background with bounded USB timeouts, consumes no PIN attempts and releases the interface before biometric or manual vault unlock. A serial number is a device identifier, not cryptographic attestation of the device.
 
 - Android 13+ (API 33), USB-C, Token2 USB device `349e:0024`.
-- Package `com.ordanexa.fidoreader`, version code 7. The archived build uses the existing signing identity for in-place updates.
+- Package `com.ordanexa.fidoreader`, version code 8. The archived build uses the existing signing identity for in-place updates.
 - No vault or master password is persisted to disk. Only an opt-in encrypted token PIN is saved locally. Android backup is disabled.
 - Uses Android biometric permission. No Internet, storage, NFC or accessibility permission.
-- Android build, serial framing/parsing tests, all 154 existing protocol checks, APK alignment and the preserved signing certificate passed in [GitHub Actions](https://github.com/ordanexa/fidoparole-android-reader/actions/runs/44602305117).
-- On-device testing of the serial query and 0.1.6-test is pending. Pascal confirmed fingerprint unlock followed by token touch in 0.1.4-test on the tablet.
+- Build, protocol and touch-event regressions, serial tests, APK alignment and signing checks passed in [GitHub Actions](https://github.com/ordanexa/fidoparole-android-reader/actions/runs/44609784131).
+- On-device testing of 0.1.7-test, including popup layout and cancellation, is pending. Pascal confirmed fingerprint unlock followed by token touch in 0.1.4-test on the tablet.
 
 ## USB access with multiple apps
 
@@ -70,7 +70,7 @@ export ANDROID_HOME=/path/to/android-sdk
 ./build.sh
 ```
 
-Output: `dist/fidoparole-android-reader-0.1.6-test.apk` and `dist/SHA256SUMS`.
+Output: `dist/fidoparole-android-reader-0.1.7-test.apk` and `dist/SHA256SUMS`.
 
 By default, the build creates a local test key at `build/test-signing.jks`. See [APK signing](docs/SIGNING.md) for custom signing and update compatibility.
 
@@ -103,6 +103,13 @@ See the [validation report](docs/VALIDATION.md), [device checklist](docs/DEVICE_
 ## License
 
 The original Ordanexa reader code and documentation are available under the [MIT License](LICENSE). See [NOTICE.md](NOTICE.md) for Token2 artwork and third-party notices.
+
+## Changes in 0.1.7-test
+
+- Renamed both biometric prompts to **Scan your fingerprint**, with instructions for the phone or tablet sensor.
+- Added a separate **Touch your security key** popup during the token-presence request, for biometric and manual PIN unlock.
+- Close the touch popup automatically on token response, errors, backgrounding or unplugging. **Cancel** and Android Back stop the pending unlock.
+- Version code 8, with the existing signing identity and serial-bound saved-PIN format.
 
 ## Changes in 0.1.6-test
 

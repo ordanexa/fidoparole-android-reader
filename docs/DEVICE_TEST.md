@@ -85,3 +85,16 @@ The user confirmed 0.1.4 fingerprint unlock followed by token touch on the table
 7. Cancel biometric authentication and confirm **Use PIN** still works. Verify existing vault contents in FidoParole Desktop.
 
 Physical serial-query support and Android lifecycle checks for this build remain pending. Report status text and app version, without sharing PINs or vault entries.
+
+## Fingerprint and touch prompts (0.1.7-test)
+
+1. With a serial-bound saved PIN, open the reader. Confirm the biometric prompt says **Scan your fingerprint** and asks for the phone/tablet fingerprint sensor.
+2. Authenticate. Confirm the fingerprint prompt closes and a separate **Touch your security key** popup appears when the key requests touch.
+3. Touch the blinking Token2. Confirm the touch popup closes automatically and the vault opens.
+4. Choose **Use PIN** and unlock manually. Confirm the same touch popup appears at the token-presence step.
+5. Cancel the touch popup with **Cancel**, then repeat using Android Back. Confirm the vault remains locked and a new unlock can be started.
+6. Unplug the key or background the app while the touch popup is open. Confirm it closes and does not reappear from a stale operation.
+7. Let the token touch request time out. Confirm the popup closes and the error is visible in the login screen.
+8. Check popup text and buttons in portrait and landscape on phone and tablet.
+
+These physical-device popup and lifecycle checks remain pending.
